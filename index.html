@@ -212,7 +212,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
         <div class="p-photo">
           <img class="p-bg" alt="" hidden>
           <img id="o_img" class="p-main" alt="" hidden>
-          <div class="p-empty" id="o_empty"><b>📷</b>사진을 올려주세요</div>
+          <div class="p-empty" id="o_empty"><b>📷</b>여기를 눌러 사진을 선택하세요</div>
           <div class="p-scrim" id="o_scrim"></div>
           <div class="p-text"><div class="p-title" id="o_title"></div><div class="p-sub" id="o_sub"></div></div>
         </div>
@@ -630,7 +630,7 @@ document.addEventListener("paste", e => {
     startDist = pts.size >= 2 ? dist() : 0;
   }
   wrap.addEventListener("pointerdown", e => {
-    if(!P()){ $("fileInput").click(); return; } // 사진이 없으면 눌러서 선택
+    if(!P()) return; // 사진이 없을 때 누르면 사진 선택 (아래 click에서 — 폰은 손가락을 뗄 때만 선택 창을 열 수 있음)
     if(blurMode) return; // 얼굴 가리기 중엔 사진 대신 가리개를 다룸
     if(e.pointerType === "mouse" && e.button !== 0) return;
     wrap.setPointerCapture(e.pointerId);
@@ -660,6 +660,7 @@ document.addEventListener("paste", e => {
   }
   wrap.addEventListener("pointerup", end);
   wrap.addEventListener("pointercancel", end);
+  wrap.addEventListener("click", () => { if(!P()) $("fileInput").click(); });
 })();
 
 /* ---------- 입력칸 ---------- */
