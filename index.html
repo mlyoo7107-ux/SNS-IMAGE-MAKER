@@ -96,6 +96,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .p-text{position:absolute;left:calc(72px*var(--k,1));right:calc(72px*var(--k,1));bottom:calc(48px*var(--k,1))}
 .p-title{font-size:58px;font-weight:900;color:#fff;line-height:1.25;white-space:pre-wrap;text-shadow:0 4px 16px rgba(0,0,0,.4)}
 /* 글자 위치: 위 · 가운데 · 아래(기본). 어두운 덮개도 글자 쪽으로 따라감 */
+.seg .sw{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid #ccc;margin-right:6px;vertical-align:-1px}
 .bg-white .p-photo{background:#fff}
 .bg-dark .p-photo{background:#2d2a2e}
 .bg-pink .p-photo{background:#fde7f0}
@@ -159,7 +160,16 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     <div class="field">
       <label>용도</label>
       <div class="seg" id="f_preset"><button type="button" data-v="photo" class="on">📷 일반 사진</button><button type="button" data-v="review">📝 후기 캡처</button></div>
-      <p class="hint">'후기 캡처'는 사진을 자르지 않고 전체를 넣고, 남는 곳은 흰색으로 채워요. REVIEW 문구도 자동으로 들어가요 (고칠 수 있어요)</p>
+      <p class="hint">'후기 캡처'는 사진을 자르지 않고 카드처럼 넣고, REVIEW 문구도 자동으로 들어가요 (고칠 수 있어요)</p>
+      <div id="reviewBgRow" hidden>
+        <label style="margin-top:10px">후기 배경</label>
+        <div class="seg" id="f_reviewBg">
+          <button type="button" data-v="white" class="on"><span class="sw" style="background:#fff"></span>흰색</button>
+          <button type="button" data-v="dark"><span class="sw" style="background:#2d2a2e"></span>차콜</button>
+          <button type="button" data-v="pink"><span class="sw" style="background:#fde7f0"></span>핑크</button>
+        </div>
+        <p class="hint">고른 배경은 기억해 뒀다가 다음에도 써요</p>
+      </div>
     </div>
     <div class="field">
       <button type="button" class="pick" id="pickBtn">📷 사진 선택하기 (여러 장 가능)</button>
@@ -705,6 +715,16 @@ wireSeg("f_bgMode", v => {
   root.classList.remove("bg-white", "bg-dark", "bg-pink");
   if(v !== "blur") root.classList.add("bg-" + v);
   applyImgTransform();
+  /* 위쪽 '후기 배경' 버튼도 같은 색으로 표시 */
+  $("f_reviewBg").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+});
+/* 후기 배경: 마지막에 고른 색을 기억 (기억 못 하는 브라우저면 흰색) */
+let reviewBg = "white";
+try{ reviewBg = localStorage.getItem("cmReviewBg") || "white"; }catch(e){}
+wireSeg("f_reviewBg", v => {
+  reviewBg = v;
+  try{ localStorage.setItem("cmReviewBg", v); }catch(e){}
+  pickSeg("f_bgMode", v);
 });
 const REVIEW_TEXT = {title:"REVIEW", sub:"고객님이 남겨주신 소중한 후기"};
 function setTextInputs(title, sub){ $("f_title").value = title; $("f_sub").value = sub; onTextInput(); }
@@ -712,11 +732,13 @@ function setTextInputs(title, sub){ $("f_title").value = title; $("f_sub").value
 const pickSeg = (id, v) => document.querySelector(`#${id} [data-v="${v}"]`).click();
 wireSeg("f_preset", v => {
   if(v === "review"){
-    pickSeg("f_fit", "contain"); pickSeg("f_bgMode", "white"); pickSeg("f_textColor", "pink"); pickSeg("f_shade", "none");
+    pickSeg("f_fit", "contain"); pickSeg("f_bgMode", reviewBg); pickSeg("f_textColor", "pink"); pickSeg("f_shade", "none");
+    $("reviewBgRow").hidden = false;
     /* 제목이 비어 있으면 후기용 기본 문구를 넣어줌 (고쳐도 됨) */
     if(!$("f_title").value.trim() && !$("f_sub").value.trim()) setTextInputs(REVIEW_TEXT.title, REVIEW_TEXT.sub);
   }else{
     pickSeg("f_fit", "cover"); pickSeg("f_textColor", "white"); pickSeg("f_shade", "strong");
+    $("reviewBgRow").hidden = true;
     /* 기본 문구를 안 고쳤으면 일반 사진으로 돌아갈 때 지움 */
     if($("f_title").value === REVIEW_TEXT.title && $("f_sub").value === REVIEW_TEXT.sub) setTextInputs("", "");
   }
