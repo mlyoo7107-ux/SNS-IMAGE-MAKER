@@ -49,7 +49,8 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .go:disabled{background:var(--ab);cursor:not-allowed}
 .go.sub{background:white;color:var(--a);border:1px solid var(--ab);padding:11px;margin-top:-6px}
 .go.sub:hover{background:#fff5fa}
-.preview-outer{display:flex;flex-direction:column;align-items:center;gap:8px}
+/* PC: 왼쪽 입력칸을 내려도 오른쪽 미리보기는 화면에 붙어 따라옴 */
+.preview-outer{display:flex;flex-direction:column;align-items:center;gap:8px;position:sticky;top:20px}
 .preview-wrap{width:360px;overflow:hidden;position:relative;border-radius:10px;box-shadow:0 4px 20px rgba(23,21,18,.12);background:#fff;cursor:grab;touch-action:none}
 .preview-wrap.dragging{cursor:grabbing}
 .preview-wrap.empty{cursor:pointer;touch-action:auto}
@@ -183,14 +184,16 @@ let previewScale = 1/3;
 const ratio = () => RATIOS[$("f_ratio").value];
 const P = () => photos[cur];
 
-/* 미리보기 크기 — 세로형은 폭 360px, 가로형은 최대 560px. 휴대폰은 화면 높이의 45%까지 */
+/* 미리보기 크기 — 세로형은 폭 360px, 가로형은 최대 560px.
+   미리보기는 스크롤해도 화면에 붙어 있으니 높이를 화면 안에 맞춤 (휴대폰은 화면의 45%, PC는 화면 전체에서 여백만큼 뺀 만큼) */
 function applyRatio(){
   const r = ratio();
   const outer = document.querySelector(".preview-outer");
-  const sticky = getComputedStyle(outer).position === "sticky";
-  const room = (outer.clientWidth || 360) - (sticky ? 32 : 0);
+  const mobile = matchMedia("(max-width:860px)").matches;
+  const room = (outer.clientWidth || 360) - (mobile ? 32 : 0);
   let viewW = Math.min(r.w > r.h ? 560 : 360, room);
-  if(sticky) viewW = Math.min(viewW, window.innerHeight * (photos.length > 1 ? 0.4 : 0.45) * r.w / r.h);
+  const maxH = mobile ? window.innerHeight * (photos.length > 1 ? 0.4 : 0.45) : window.innerHeight - 140;
+  viewW = Math.min(viewW, Math.max(200, maxH) * r.w / r.h);
   previewScale = viewW / r.w;
   const root = $("posterRoot");
   root.style.width = r.w + "px";
