@@ -84,6 +84,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .p-text{position:absolute;left:calc(72px*var(--k,1));right:calc(72px*var(--k,1));bottom:calc(48px*var(--k,1))}
 .p-title{font-size:58px;font-weight:900;color:#fff;line-height:1.25;white-space:pre-wrap;text-shadow:0 4px 16px rgba(0,0,0,.4)}
 /* 글자 위치: 위 · 가운데 · 아래(기본). 어두운 덮개도 글자 쪽으로 따라감 */
+.bg-white .p-photo{background:#fff}
 .pos-top .p-text{top:calc(56px*var(--k,1));bottom:auto}
 /* 저장 이미지(html2canvas)에서 덮개 아래 끝에 검은 줄이 생김 → 덮개를 사진 밖까지 늘려 그 줄이 잘려 나가게 하고, 아래 38%는 투명 */
 .pos-top .p-scrim{top:0;bottom:auto;height:calc(100% + 6px);background:linear-gradient(to top,rgba(0,0,0,0) 0%,rgba(0,0,0,0) 38%,rgba(0,0,0,.38) 72%,rgba(0,0,0,.72) 100%)}
@@ -97,6 +98,26 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .p-foot .r{font-size:calc(20px*var(--k,1));color:var(--m);font-weight:600;text-align:right}
 .p-foot.solo{justify-content:center}
 
+/* 사진 자르기 화면 */
+.crop-ov{position:fixed;inset:0;z-index:200;background:rgba(20,20,24,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px}
+.crop-top{color:#fff;font-size:13.5px;text-align:center;line-height:1.5}
+.crop-stage{position:relative;touch-action:none;user-select:none;-webkit-user-select:none}
+.crop-clip{position:relative;overflow:hidden;line-height:0}
+.crop-clip img{display:block;max-width:min(92vw,900px);max-height:62vh;-webkit-user-drag:none;pointer-events:none}
+.crop-shade{position:absolute;box-shadow:0 0 0 9999px rgba(0,0,0,.6);pointer-events:none}
+.crop-box{position:absolute;border:2px solid #fff;cursor:move;touch-action:none}
+.crop-box::before,.crop-box::after{content:"";position:absolute;border:0 solid rgba(255,255,255,.45);pointer-events:none}
+.crop-box::before{left:33.33%;right:33.33%;top:0;bottom:0;border-left-width:1px;border-right-width:1px}
+.crop-box::after{top:33.33%;bottom:33.33%;left:0;right:0;border-top-width:1px;border-bottom-width:1px}
+.crop-box i{position:absolute;width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid var(--a);z-index:1}
+.crop-box i[data-h=nw]{left:-12px;top:-12px;cursor:nwse-resize}
+.crop-box i[data-h=ne]{right:-12px;top:-12px;cursor:nesw-resize}
+.crop-box i[data-h=sw]{left:-12px;bottom:-12px;cursor:nesw-resize}
+.crop-box i[data-h=se]{right:-12px;bottom:-12px;cursor:nwse-resize}
+.crop-bar{display:flex;flex-direction:column;gap:10px;width:min(92vw,520px)}
+.crop-actions{display:flex;gap:8px}
+.crop-actions button{flex:1;padding:12px 6px;border-radius:22px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-size:13.5px;font-weight:bold;font-family:inherit;cursor:pointer}
+.crop-actions button.ok{background:var(--a);border-color:var(--a);flex:1.4}
 .save-ov{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px;overflow-y:auto}
 .save-ov p{margin:0;color:#fff;font-size:15px;text-align:center;position:sticky;top:0;background:rgba(0,0,0,.6);padding:8px 14px;border-radius:12px}
 .save-ov img{max-width:100%;max-height:72vh;border-radius:8px;-webkit-touch-callout:default;flex:none}
@@ -112,12 +133,22 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 <div class="layout">
   <div class="panel">
     <div class="field">
+      <label>용도</label>
+      <div class="seg" id="f_preset"><button type="button" data-v="photo" class="on">📷 일반 사진</button><button type="button" data-v="review">📝 후기 캡처</button></div>
+      <p class="hint">'후기 캡처'는 사진을 자르지 않고 전체를 넣고, 남는 곳은 흰색으로 채워요</p>
+    </div>
+    <div class="field">
       <button type="button" class="pick" id="pickBtn">📷 사진 선택하기 (여러 장 가능)</button>
       <input type="file" id="fileInput" accept="image/*" multiple hidden>
       <p class="hint" style="text-align:center" id="pickHint">최대 10장 · 이 버튼이나 미리보기에 끌어다 놓아도 돼요</p>
       <div class="strip" id="strip"></div>
       <div class="order" id="orderRow" hidden><button type="button" id="mvLeft">◀ 앞으로</button><button type="button" id="mvRight">뒤로 ▶</button></div>
       <p class="hint" id="orderHint" hidden>사진을 끌어서 순서를 바꿀 수 있어요 (폰은 길게 누른 뒤 끌기)</p>
+    </div>
+    <div class="field" id="cropField" hidden>
+      <label>사진 자르기 <span id="cropFor"></span></label>
+      <button type="button" class="blur-btn" id="cropBtn">✂️ 사진 자르기</button>
+      <p class="hint">캡처 화면의 위아래처럼 필요 없는 부분을 잘라낼 수 있어요</p>
     </div>
     <div class="field" id="blurField" hidden>
       <label>얼굴 가리기 <span id="blurFor"></span></label>
@@ -132,7 +163,14 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
       </div>
     </div>
     <div class="field"><label>비율</label><select id="f_ratio"></select><p class="hint">사진에 맞춰 자동으로 추천해요. 여러 장은 모두 같은 비율로 만들어져요</p></div>
-    <div class="field"><label>확대 <span id="zoomFor"></span></label><input type="range" id="f_zoom" min="100" max="250" value="100" style="width:100%;padding:0;border:0"><p class="hint">미리보기를 드래그하면 위치를 옮길 수 있어요. 많이 옮기고 싶으면 확대를 키우고, 사진 전체를 넣고 싶으면 왼쪽 끝까지 줄이세요 (빈 곳은 흐린 배경으로 채워져요)</p></div>
+    <div class="field">
+      <label>사진 맞춤</label>
+      <div class="seg" id="f_fit"><button type="button" data-v="cover" class="on">꽉 채우기</button><button type="button" data-v="contain">전체 넣기</button></div>
+      <label style="margin-top:10px">빈 곳 배경</label>
+      <div class="seg" id="f_bgMode"><button type="button" data-v="white" class="on">⬜ 흰색</button><button type="button" data-v="blur">흐린 사진</button></div>
+      <p class="hint">후기 캡처처럼 비율이 안 맞는 사진은 '전체 넣기'로 하면 잘리지 않고, 남는 곳은 고른 배경으로 채워져요</p>
+    </div>
+    <div class="field"><label>확대 <span id="zoomFor"></span></label><input type="range" id="f_zoom" min="100" max="250" value="100" style="width:100%;padding:0;border:0"><p class="hint">미리보기를 드래그하면 위치를 옮길 수 있어요. 많이 옮기고 싶으면 확대를 키우고, 왼쪽으로 줄이면 사진 전체가 들어가고 사방에 여백도 생겨요</p></div>
     <div class="field" id="textOnField" hidden><label>사진별 글자</label><div class="seg" id="f_textOn"><button type="button" data-v="all" class="on">모두 같게</button><button type="button" data-v="first">첫 장만</button><button type="button" data-v="each">장마다 다르게</button></div><p class="hint">'장마다 다르게'는 위에서 사진을 고른 뒤 그 사진의 제목을 고쳐요. 제목을 비우면 그 사진엔 로고만 들어가요</p></div>
     <div class="field"><label>제목 <span id="titleFor"></span></label><textarea id="f_title" rows="2" placeholder="이미지에 넣을 제목을 입력하세요"></textarea><p class="hint">줄을 바꾸면 이미지에서도 줄이 바뀌어요</p></div>
     <div class="field"><label>작은 글씨 <span id="subFor">(선택)</span></label><input id="f_sub" placeholder="예: 2026 가을 컬러 수업 · 3학년 2반"></div>
@@ -161,6 +199,17 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     <div class="pv-nav" id="pvNav" hidden><button type="button" id="pvPrev" aria-label="이전 사진">◀</button><span id="pvCount"></span><button type="button" id="pvNext" aria-label="다음 사진">▶</button></div>
   </div>
 </div>
+<div class="crop-ov" id="cropOv" hidden>
+  <div class="crop-top"><b>사진 자르기</b><br>네모를 끌어 옮기고, 모서리 점으로 크기를 바꾸세요</div>
+  <div class="crop-stage" id="cropStage">
+    <div class="crop-clip"><img id="cropImg" alt=""><div class="crop-shade" id="cropShade"></div></div>
+    <div class="crop-box" id="cropBox"><i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i></div>
+  </div>
+  <div class="crop-bar">
+    <div class="seg" id="f_cropAspect"><button type="button" data-v="free" class="on">자유롭게</button><button type="button" data-v="frame" id="cropFrameBtn">틀 비율에 맞추기</button></div>
+    <div class="crop-actions"><button type="button" id="cropReset">원래 사진으로</button><button type="button" id="cropCancel">취소</button><button type="button" class="ok" id="cropApply">✓ 자르기</button></div>
+  </div>
+</div>
 <script>
 const $ = id => document.getElementById(id);
 const RATIOS = {
@@ -180,6 +229,8 @@ let cur = -1;
 let ratioManuallySet = false;
 let textScale = 1;
 let textOn = "all";
+let fitMode = "cover"; // cover = 꽉 채우기, contain = 사진 전체 넣기
+let bgMode = "white";  // 빈 곳 배경: white = 흰색, blur = 흐린 사진
 const REF_H = 1350; // 4:5 기준 — 글자 크기가 "정상"으로 보이는 기준 비율
 const BASE_TITLE_SIZE = 58, BASE_SUB_SIZE = 26;
 let previewScale = 1/3;
@@ -228,9 +279,13 @@ function fitPhoto(p){
   p.baseH = p.naturalH * cover;
   p.zoom = 1; p.panX = 0;
   p.panY = Math.max(0, p.baseH - box.h) / 2 * TOP_BIAS;
+  if(fitMode === "contain"){ p.zoom = minZoom(p) * CONTAIN_FIT; p.panY = 0; }
 }
 /* 확대를 이만큼까지 줄이면 사진 전체가 칸 안에 들어옴 */
 function minZoom(p){ const box = photoBox(); return Math.min(1, box.w / p.baseW, box.h / p.baseH); }
+/* 그보다 더 줄여서 사방에 여백을 둘 수도 있음 (전체가 딱 들어가는 크기의 절반까지) */
+function zoomFloor(p){ return minZoom(p) * 0.5; }
+const CONTAIN_FIT = 0.92; // '전체 넣기'는 사방에 살짝 흰 여백이 남게
 
 /* 사진 위치를 제한하고 img에 적용 — 미리보기와 저장용 복제본 모두 이걸로 그림.
    사진이 칸보다 크면 빈 곳이 안 생기게, 작으면 칸 안에서 자유롭게 */
@@ -246,7 +301,7 @@ function placeImg(img, p){
   /* 빈 곳이 생기면 같은 사진을 흐리게 크게 깔아서 채움 */
   const bg = img.parentElement.querySelector(".p-bg");
   const gap = effW < box.w - 1 || effH < box.h - 1;
-  bg.hidden = !gap;
+  bg.hidden = !gap || bgMode === "white"; // 흰색이면 칸 배경(흰색)이 그대로 보임
   if(gap){
     const s = Math.max(box.w / p.naturalW, box.h / p.naturalH) * 1.1;
     bg.src = p.bgUrl;
@@ -329,6 +384,9 @@ function renderStrip(){
   $("saveOneBtn").hidden = n < 2;
   $("resetBtn").hidden = !n;
   $("blurField").hidden = !n;
+  $("cropField").hidden = !n;
+  $("cropFor").textContent = n > 1 ? `(${cur + 1}번 사진)` : "";
+  $("cropBtn").textContent = P()?.crop ? "✂️ 자른 영역 다시 고르기" : "✂️ 사진 자르기";
   $("blurFor").textContent = n > 1 ? `(${cur + 1}번 사진)` : "";
   if(!n && blurMode) setBlurMode(false);
   if(!pendingFiles) $("downloadBtn").textContent = saveLabel();
@@ -342,7 +400,7 @@ function show(i){
   if(p){
     img.src = p.url; img.hidden = false;
     placeImg(img, p);
-    $("f_zoom").min = Math.floor(minZoom(p) * 100);
+    $("f_zoom").min = Math.floor(zoomFloor(p) * 100);
     $("f_zoom").value = Math.round(p.zoom * 100);
   }else{
     img.hidden = true; img.removeAttribute("src");
@@ -380,10 +438,7 @@ async function addFiles(fileList){
   if(!loaded.length) return;
   const first = !photos.length;
   /* 첫 사진에 맞춰 비율 추천 */
-  if(first && !ratioManuallySet){
-    const ar = loaded[0].naturalW / loaded[0].naturalH;
-    $("f_ratio").value = ar >= 1.3 ? "16:9" : ar >= 0.95 ? "1:1" : ar >= 0.7 ? "4:5" : "9:16";
-  }
+  if(first && !ratioManuallySet) recommendRatio(loaded[0]);
   loaded.forEach(fitPhoto);
   photos.push(...loaded);
   clearPending();
@@ -393,6 +448,7 @@ async function addFiles(fileList){
 function removePhoto(i){
   if(photos[i].url !== photos[i].srcUrl) URL.revokeObjectURL(photos[i].url);
   URL.revokeObjectURL(photos[i].srcUrl);
+  if(photos[i].orig && photos[i].orig.url !== photos[i].srcUrl) URL.revokeObjectURL(photos[i].orig.url);
   photos.splice(i, 1);
   clearPending();
   applyRatio();
@@ -533,7 +589,7 @@ document.addEventListener("paste", e => {
     if(!pts.has(e.pointerId) || !P()) return;
     pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
     if(pts.size >= 2 && startDist > 0){
-      const z = Math.max(minZoom(P()), Math.min(2.5, startZoom * dist() / startDist));
+      const z = Math.max(zoomFloor(P()), Math.min(2.5, startZoom * dist() / startDist));
       P().zoom = z;
       $("f_zoom").value = Math.round(z * 100);
     }
@@ -573,7 +629,15 @@ wireSeg("f_textOn", v => {
 });
 /* 포스터에 클래스로 적용 — 저장용 복제본도 그대로 따라감 */
 const root = $("posterRoot");
-root.classList.add("pos-bottom", "align-left");
+root.classList.add("pos-bottom", "align-left", "bg-white");
+wireSeg("f_fit", v => { fitMode = v; photos.forEach(fitPhoto); show(cur); });
+wireSeg("f_bgMode", v => { bgMode = v; root.classList.toggle("bg-white", v === "white"); applyImgTransform(); });
+/* 용도 버튼 = 사진 맞춤·배경을 한 번에 고르는 단축키 (그 뒤에 각각 따로 바꿔도 됨) */
+const pickSeg = (id, v) => document.querySelector(`#${id} [data-v="${v}"]`).click();
+wireSeg("f_preset", v => {
+  if(v === "review"){ pickSeg("f_fit", "contain"); pickSeg("f_bgMode", "white"); }
+  else { pickSeg("f_fit", "cover"); }
+});
 wireSeg("f_pos", v => { root.classList.remove("pos-top", "pos-mid", "pos-bottom"); root.classList.add("pos-" + v); });
 wireSeg("f_align", v => { root.classList.remove("align-left", "align-center"); root.classList.add("align-" + v); });
 document.querySelector(".panel").addEventListener("input", clearPending);
@@ -750,6 +814,139 @@ $("f_blurLevel").addEventListener("input", e => {
   clearTimeout(levelTimer);
   levelTimer = setTimeout(rebuildAll, 150);
 });
+
+/* ---------- 사진 자르기 ---------- */
+/* 사진 모양에 맞는 비율 추천 */
+function recommendRatio(p){
+  const ar = p.naturalW / p.naturalH;
+  $("f_ratio").value = ar >= 1.3 ? "16:9" : ar >= 0.95 ? "1:1" : ar >= 0.7 ? "4:5" : "9:16";
+}
+/* 자르기는 원본(p.orig) 기준 비율(0~1)로 기억 — 다시 열면 원본 전체에서 영역을 고를 수 있음 */
+let cropEd = null; // {p, o, rect:{x,y,w,h}, aspect}
+function openCrop(){
+  const p = P(); if(!p) return;
+  if(blurMode) setBlurMode(false);
+  const o = p.orig || {el:p.el, url:p.srcUrl, w:p.naturalW, h:p.naturalH};
+  cropEd = {p, o, rect:{...(p.crop || {x:0, y:0, w:1, h:1})}, aspect:"free"};
+  $("f_cropAspect").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === "free"));
+  $("cropFrameBtn").textContent = `틀 비율(${$("f_ratio").value})에 맞추기`;
+  $("cropOv").hidden = false;
+  document.body.style.overflow = "hidden";
+  const img = $("cropImg");
+  img.onload = drawCrop;
+  img.src = o.url;
+  if(img.complete) drawCrop();
+}
+function closeCrop(){
+  $("cropOv").hidden = true;
+  document.body.style.overflow = "";
+  cropEd = null;
+}
+function drawCrop(){
+  if(!cropEd) return;
+  const img = $("cropImg"), W = img.clientWidth, H = img.clientHeight, r = cropEd.rect;
+  const css = `left:${r.x * W}px;top:${r.y * H}px;width:${r.w * W}px;height:${r.h * H}px`;
+  $("cropBox").style.cssText = css;
+  $("cropShade").style.cssText = css;
+}
+/* 틀 비율을 원본 사진 기준 비율(0~1 단위의 가로/세로)로 바꿈 */
+function frameAspectN(){
+  const box = photoBox();
+  return (box.w / box.h) * (cropEd.o.h / cropEd.o.w);
+}
+/* 지금 영역 안에서 틀 비율로 가장 크게 */
+function fitAspect(){
+  const A = frameAspectN(), r = cropEd.rect;
+  let w = r.w, h = w / A;
+  if(h > r.h){ h = r.h; w = h * A; }
+  cropEd.rect = {x:r.x + (r.w - w) / 2, y:r.y + (r.h - h) / 2, w, h};
+}
+(function wireCrop(){
+  const stage = $("cropStage");
+  let op = null;
+  const MIN = 0.05;
+  const pt = e => { const r = $("cropImg").getBoundingClientRect(); return {x:(e.clientX - r.left) / r.width, y:(e.clientY - r.top) / r.height}; };
+  stage.addEventListener("pointerdown", e => {
+    if(!cropEd || !e.target.closest(".crop-box")) return;
+    e.preventDefault();
+    stage.setPointerCapture(e.pointerId);
+    op = {h:e.target.dataset.h || "move", start:pt(e), orig:{...cropEd.rect}};
+  });
+  stage.addEventListener("pointermove", e => {
+    if(!op) return;
+    const p = pt(e), dx = p.x - op.start.x, dy = p.y - op.start.y, o = op.orig;
+    if(op.h === "move"){
+      cropEd.rect = {...o, x:Math.max(0, Math.min(1 - o.w, o.x + dx)), y:Math.max(0, Math.min(1 - o.h, o.y + dy))};
+    }else{
+      let L = o.x, T = o.y, R = o.x + o.w, B = o.y + o.h;
+      if(op.h.includes("w")) L = Math.max(0, Math.min(R - MIN, L + dx));
+      if(op.h.includes("e")) R = Math.min(1, Math.max(L + MIN, R + dx));
+      if(op.h.includes("n")) T = Math.max(0, Math.min(B - MIN, T + dy));
+      if(op.h.includes("s")) B = Math.min(1, Math.max(T + MIN, B + dy));
+      if(cropEd.aspect === "frame"){
+        /* 비율 고정: 가로에 맞춰 세로를 정하고, 넘치면 세로에 맞춰 가로를 줄임 (반대쪽 모서리는 고정) */
+        const A = frameAspectN();
+        let w = R - L, h = w / A;
+        const maxH = op.h.includes("n") ? B : 1 - T;
+        if(h > maxH){ h = maxH; w = h * A; }
+        if(op.h.includes("w")) L = R - w; else R = L + w;
+        if(op.h.includes("n")) T = B - h; else B = T + h;
+      }
+      cropEd.rect = {x:L, y:T, w:R - L, h:B - T};
+    }
+    drawCrop();
+  });
+  const end = () => { op = null; };
+  stage.addEventListener("pointerup", end);
+  stage.addEventListener("pointercancel", end);
+})();
+wireSeg("f_cropAspect", v => { if(!cropEd) return; cropEd.aspect = v; if(v === "frame") fitAspect(); drawCrop(); });
+$("cropReset").onclick = () => { if(!cropEd) return; cropEd.rect = {x:0, y:0, w:1, h:1}; if(cropEd.aspect === "frame") fitAspect(); drawCrop(); };
+$("cropCancel").onclick = closeCrop;
+$("cropBtn").onclick = openCrop;
+document.addEventListener("keydown", e => { if(e.key === "Escape" && cropEd) closeCrop(); });
+window.addEventListener("resize", () => { if(cropEd) drawCrop(); });
+
+$("cropApply").onclick = async () => {
+  if(!cropEd) return;
+  const {p, o, rect} = cropEd;
+  closeCrop();
+  const full = rect.x < 0.002 && rect.y < 0.002 && rect.w > 0.996 && rect.h > 0.996;
+  const prev = p.crop || {x:0, y:0, w:1, h:1};
+  let el = o.el, url = o.url, nw = o.w, nh = o.h;
+  if(!full){
+    const sx = Math.round(rect.x * o.w), sy = Math.round(rect.y * o.h);
+    nw = Math.max(1, Math.round(rect.w * o.w)); nh = Math.max(1, Math.round(rect.h * o.h));
+    const c = document.createElement("canvas"); c.width = nw; c.height = nh;
+    c.getContext("2d").drawImage(o.el, sx, sy, nw, nh, 0, 0, nw, nh);
+    const blob = await new Promise(res => c.toBlob(res, "image/jpeg", 0.95));
+    url = URL.createObjectURL(blob);
+    el = new Image();
+    await new Promise(res => { el.onload = res; el.onerror = res; el.src = url; });
+  }
+  await p.ready;
+  /* 이전에 만든 사진 정리 — 원본은 남겨둠 */
+  if(p.url !== p.srcUrl) URL.revokeObjectURL(p.url);
+  if(p.srcUrl !== o.url) URL.revokeObjectURL(p.srcUrl);
+  p.orig = o;
+  p.crop = full ? null : {...rect};
+  p.el = el; p.srcUrl = url; p.url = url;
+  p.naturalW = nw; p.naturalH = nh;
+  p.bgUrl = makeBg(el);
+  /* 얼굴 가리기 위치를 새로 자른 사진 기준으로 옮김 (잘려 나간 가리개는 뺌) */
+  p.blurs = p.blurs.map(b => {
+    const ax = prev.x + b.x * prev.w, ay = prev.y + b.y * prev.h, aw = b.w * prev.w, ah = b.h * prev.h;
+    let x = (ax - rect.x) / rect.w, y = (ay - rect.y) / rect.h, w = aw / rect.w, h = ah / rect.h;
+    const x2 = Math.min(1, x + w), y2 = Math.min(1, y + h); x = Math.max(0, x); y = Math.max(0, y);
+    return {x, y, w:x2 - x, h:y2 - y};
+  }).filter(b => b.w > 0.01 && b.h > 0.01);
+  /* 사진이 1장이면 자른 모양에 맞춰 비율을 다시 추천 */
+  if(photos.length === 1 && !ratioManuallySet){ recommendRatio(p); applyRatio(); }
+  fitPhoto(p);
+  if(p.blurs.length) rebuild(p);
+  clearPending();
+  show(cur);
+};
 
 /* ---------- 저장 ---------- */
 const saveLabel = () => photos.length > 1 ? `⬇️ ${photos.length}장 모두 저장` : "⬇️ PNG로 저장";
