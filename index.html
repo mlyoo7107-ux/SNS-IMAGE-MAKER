@@ -150,6 +150,10 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .feed-tile.new{outline:3px solid var(--a);outline-offset:-3px}
 .feed-tile .tag{position:absolute;left:5px;top:5px;background:var(--a);color:#fff;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:8px}
 .feed-tile .multi{position:absolute;right:6px;top:5px;color:#fff;font-size:14px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.feed-tile[data-fi]{cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.feed-tile img{pointer-events:none;-webkit-user-drag:none}
+.feed-tile.lifting{z-index:5;opacity:.85;cursor:grabbing;box-shadow:0 10px 24px rgba(0,0,0,.35)}
+.feed-tile.drop-target{outline:3px dashed var(--a);outline-offset:-3px}
 .feed-tile .x{position:absolute;right:4px;top:4px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:13px;line-height:22px;padding:0;cursor:pointer}
 .feed-tile.empty{display:flex;align-items:center;justify-content:center;color:#bbb;font-size:22px;background:#f5f5f7}
 .feed-foot{padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--l)}
@@ -283,7 +287,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
       <button type="button" class="go sub" id="feedAdd" style="margin:0">＋ 기존 게시물 추가</button>
       <input type="file" id="feedFile" accept="image/*" multiple hidden>
       <button type="button" class="go" id="feedPosted">✓ 이 게시물 올렸어요 (피드에 기억)</button>
-      <p class="hint">기존 게시물은 최신 것부터 골라 주세요. 기억한 게시물은 이 기기에만 저장되고, ×로 지울 수 있어요</p>
+      <p class="hint">게시물을 끌어서 순서를 바꿀 수 있어요 (폰은 길게 누른 뒤 끌기). 기억한 게시물은 이 기기에만 저장되고, ×로 지울 수 있어요</p>
     </div>
   </div>
 </div>
@@ -1332,7 +1336,7 @@ async function makeThumb(src){
 function renderFeed(){
   const tiles = [];
   if(feedNew) tiles.push(`<div class="feed-tile new"><img src="${feedNew}" alt=""><span class="tag">NEW</span>${photos.length > 1 ? '<span class="multi">❐</span>' : ""}</div>`);
-  feedThumbs.forEach((t, i) => tiles.push(`<div class="feed-tile"><img src="${t}" alt=""><button type="button" class="x" data-fx="${i}" aria-label="지우기">×</button></div>`));
+  feedThumbs.forEach((t, i) => tiles.push(`<div class="feed-tile" data-fi="${i}"><img src="${t}" alt=""><button type="button" class="x" data-fx="${i}" aria-label="지우기">×</button></div>`));
   while(tiles.length < 9 || tiles.length % 3) tiles.push('<div class="feed-tile empty">＋</div>');
   $("feedGrid").innerHTML = tiles.join("");
 }
@@ -1352,7 +1356,75 @@ $("feedBtn").onclick = async () => {
 const closeFeed = () => { $("feedOv").hidden = true; document.body.style.overflow = ""; };
 $("feedClose").onclick = closeFeed;
 $("feedOv").addEventListener("click", e => { if(e.target === $("feedOv")) closeFeed(); });
+/* 기억한 게시물 끌어서 순서 바꾸기 — 마우스는 바로, 터치는 길게 누른 뒤 (NEW는 항상 맨 앞이라 제외) */
+let feedSuppressClick = false;
+(function wireFeedReorder(){
+  const grid = $("feedGrid"), scroller = grid.parentElement;
+  let st = null; // {el, from, to, pointerId, x0, y0, type, timer, dragging}
+  const clearMark = () => grid.querySelectorAll(".drop-target").forEach(t => t.classList.remove("drop-target"));
+  function begin(){
+    st.dragging = true;
+    st.el.classList.add("lifting");
+    try{ st.el.setPointerCapture(st.pointerId); }catch(e){}
+    if(navigator.vibrate && st.type === "touch") navigator.vibrate(15);
+  }
+  grid.addEventListener("pointerdown", e => {
+    const el = e.target.closest(".feed-tile[data-fi]");
+    if(!el || e.target.closest(".x")) return;
+    if(e.pointerType === "mouse" && e.button !== 0) return;
+    const i = Number(el.dataset.fi);
+    st = {el, from:i, to:i, pointerId:e.pointerId, x0:e.clientX, y0:e.clientY, type:e.pointerType, dragging:false};
+    if(e.pointerType !== "mouse") st.timer = setTimeout(() => { if(st && !st.dragging) begin(); }, 350);
+  });
+  grid.addEventListener("pointermove", e => {
+    if(!st || e.pointerId !== st.pointerId) return;
+    const dx = e.clientX - st.x0, dy = e.clientY - st.y0;
+    if(!st.dragging){
+      if(st.type === "mouse"){ if(Math.hypot(dx, dy) > 5) begin(); else return; }
+      else { if(Math.hypot(dx, dy) > 8){ clearTimeout(st.timer); st = null; } return; } // 길게 누르기 전에 움직이면 스크롤
+    }
+    st.el.style.transform = `translate(${dx}px,${dy}px)`;
+    /* 손가락 아래 칸 = 놓을 자리 (NEW 칸 위면 맨 앞) */
+    clearMark();
+    st.to = st.from;
+    grid.querySelectorAll(".feed-tile").forEach(t => {
+      if(t === st.el || t.classList.contains("empty")) return;
+      const r = t.getBoundingClientRect();
+      if(e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom){
+        st.to = t.dataset.fi !== undefined ? Number(t.dataset.fi) : 0;
+        t.classList.add("drop-target");
+      }
+    });
+    /* 위아래 끝에 가까우면 저절로 스크롤 */
+    const sr = scroller.getBoundingClientRect();
+    if(e.clientY < sr.top + 40) scroller.scrollTop -= 10;
+    else if(e.clientY > sr.bottom - 40) scroller.scrollTop += 10;
+  });
+  function finish(drop){
+    if(!st) return;
+    clearTimeout(st.timer);
+    if(st.dragging){
+      feedSuppressClick = true;
+      setTimeout(() => { feedSuppressClick = false; }, 0);
+      clearMark();
+      if(drop && st.to !== st.from){
+        const [moved] = feedThumbs.splice(st.from, 1);
+        feedThumbs.splice(st.to, 0, moved);
+        saveFeed();
+      }
+      st = null;
+      renderFeed();
+      return;
+    }
+    st = null;
+  }
+  grid.addEventListener("pointerup", () => finish(true));
+  grid.addEventListener("pointercancel", () => finish(false));
+  grid.addEventListener("touchmove", e => { if(st && st.dragging) e.preventDefault(); }, {passive:false});
+  grid.addEventListener("contextmenu", e => { if(e.target.closest(".feed-tile[data-fi]")) e.preventDefault(); });
+})();
 $("feedGrid").addEventListener("click", e => {
+  if(feedSuppressClick) return;
   const x = e.target.closest("[data-fx]");
   if(x){ feedThumbs.splice(Number(x.dataset.fx), 1); saveFeed(); renderFeed(); return; }
   if(e.target.closest(".feed-tile.empty")) $("feedFile").click();
