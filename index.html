@@ -97,6 +97,12 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .p-title{font-size:58px;font-weight:900;color:#fff;line-height:1.25;white-space:pre-wrap;text-shadow:0 4px 16px rgba(0,0,0,.4)}
 /* 글자 위치: 위 · 가운데 · 아래(기본). 어두운 덮개도 글자 쪽으로 따라감 */
 .bg-white .p-photo{background:#fff}
+.bg-dark .p-photo{background:#2d2a2e}
+.bg-pink .p-photo{background:#fde7f0}
+.p-main.card{border-radius:22px;box-shadow:0 14px 40px rgba(0,0,0,.22)}
+.bg-white .p-main.card{box-shadow:0 10px 34px rgba(0,0,0,.14);outline:1px solid #ececf0}
+/* 차콜 배경에선 분홍 제목 아래 작은 글씨를 흰색으로 */
+.bg-dark.tc-pink .p-sub{color:#fff}
 /* 글자 그늘 진하기 · 글자 색 */
 .shade-soft .p-scrim{opacity:.5}
 .shade-none .p-scrim{display:none!important}
@@ -185,7 +191,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
       <label>사진 맞춤</label>
       <div class="seg" id="f_fit"><button type="button" data-v="cover" class="on">꽉 채우기</button><button type="button" data-v="contain">전체 넣기</button></div>
       <label style="margin-top:10px">빈 곳 배경</label>
-      <div class="seg" id="f_bgMode"><button type="button" data-v="white" class="on">⬜ 흰색</button><button type="button" data-v="blur">흐린 사진</button></div>
+      <div class="seg" id="f_bgMode"><button type="button" data-v="white" class="on">흰색</button><button type="button" data-v="dark">차콜</button><button type="button" data-v="pink">핑크</button><button type="button" data-v="blur">흐린 사진</button></div>
       <p class="hint">후기 캡처처럼 비율이 안 맞는 사진은 '전체 넣기'로 하면 잘리지 않고, 남는 곳은 고른 배경으로 채워져요</p>
     </div>
     <div class="field"><label>확대 <span id="zoomFor"></span></label><input type="range" id="f_zoom" min="100" max="250" value="100" style="width:100%;padding:0;border:0"><p class="hint">미리보기를 드래그하면 위치를 옮길 수 있어요. 많이 옮기고 싶으면 확대를 키우고, 왼쪽으로 줄이면 사진 전체가 들어가고 사방에 여백도 생겨요</p></div>
@@ -356,7 +362,9 @@ function placeImg(img, p){
   /* 빈 곳이 생기면 같은 사진을 흐리게 크게 깔아서 채움 */
   const bg = img.parentElement.querySelector(".p-bg");
   const gap = effW < box.w - 1 || effH < box.h - 1;
-  bg.hidden = !gap || bgMode === "white"; // 흰색이면 칸 배경(흰색)이 그대로 보임
+  bg.hidden = !gap || bgMode !== "blur"; // 흰색·차콜·핑크면 칸 배경색이 그대로 보임
+  /* 사방에 여백이 있으면 둥근 모서리 + 그림자로 카드처럼 띄움 (후기 캡처가 배경과 구분되게) */
+  img.classList.toggle("card", effW < box.w - 1 && effH < box.h - 1);
   if(gap){
     const s = Math.max(box.w / p.naturalW, box.h / p.naturalH) * 1.1;
     bg.src = p.bgUrl;
@@ -692,7 +700,12 @@ root.classList.add("pos-bottom", "align-left", "bg-white");
 wireSeg("f_textColor", v => { root.classList.remove("tc-dark", "tc-pink"); if(v !== "white") root.classList.add("tc-" + v); });
 wireSeg("f_shade", v => { root.classList.remove("shade-soft", "shade-none"); if(v !== "strong") root.classList.add("shade-" + v); });
 wireSeg("f_fit", v => { fitMode = v; photos.forEach(fitPhoto); show(cur); });
-wireSeg("f_bgMode", v => { bgMode = v; root.classList.toggle("bg-white", v === "white"); applyImgTransform(); });
+wireSeg("f_bgMode", v => {
+  bgMode = v;
+  root.classList.remove("bg-white", "bg-dark", "bg-pink");
+  if(v !== "blur") root.classList.add("bg-" + v);
+  applyImgTransform();
+});
 const REVIEW_TEXT = {title:"REVIEW", sub:"고객님이 남겨주신 소중한 후기"};
 function setTextInputs(title, sub){ $("f_title").value = title; $("f_sub").value = sub; onTextInput(); }
 /* 용도 버튼 = 사진 맞춤·배경·글자 색을 한 번에 고르는 단축키 (그 뒤에 각각 따로 바꿔도 됨) */
