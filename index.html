@@ -110,6 +110,21 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .tc-dark .p-title,.tc-dark .p-sub,.tc-pink .p-sub{color:#171512;text-shadow:none}
 .tc-pink .p-title{color:#ff2d86;text-shadow:none}
 .pos-top .p-text{top:calc(56px*var(--k,1));bottom:auto}
+/* 릴스 표지(9:16) 피드 격자 맞춤: 피드에선 가운데 3:4(위아래 240px씩 잘림)만 보이니
+   로고 띠를 아래로 240px 늘려 로고가 보이는 영역 안에 오게, 위쪽 글자도 240px 내림 */
+.reels-safe .p-foot{padding-bottom:252px;align-items:flex-start}
+.reels-safe.pos-top .p-text{top:296px}
+.chk{display:flex!important;gap:6px;align-items:flex-start;font-weight:bold;font-size:12.5px;margin-top:10px;cursor:pointer;line-height:1.45}
+.chk input{width:auto!important;margin-top:2px}
+.chk span{font-weight:normal;color:var(--m);font-size:11px}
+.feed-guide{position:absolute;left:0;right:0;border-top:2px dashed rgba(255,45,134,.9);border-bottom:2px dashed rgba(255,45,134,.9);pointer-events:none;z-index:4;box-shadow:0 0 0 9999px rgba(255,255,255,.28)}
+.feed-guide span{position:absolute;right:6px;top:4px;background:rgba(255,45,134,.9);color:#fff;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:8px}
+.preview-wrap .feed-guide{clip-path:inset(-9999px 0)}
+/* 영상 장면 고르기 */
+.vid-ov video{display:block;max-width:min(92vw,900px);max-height:58vh;border-radius:8px;background:#000}
+.vid-seek{width:min(92vw,520px)}
+.vid-seek input{width:100%}
+.vid-seek .t{color:#fff;font-size:12px;text-align:center;margin-top:4px}
 /* 저장 이미지(html2canvas)에서 덮개 아래 끝에 검은 줄이 생김 → 덮개를 사진 밖까지 늘려 그 줄이 잘려 나가게 하고, 아래 38%는 투명 */
 .pos-top .p-scrim{top:0;bottom:auto;height:calc(100% + 6px);background:linear-gradient(to top,rgba(0,0,0,0) 0%,rgba(0,0,0,0) 38%,rgba(0,0,0,.38) 72%,rgba(0,0,0,.72) 100%)}
 .pos-mid .p-text{top:0;bottom:0;display:flex;flex-direction:column;justify-content:center}
@@ -176,7 +191,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
   <div class="panel">
     <div class="field">
       <label>용도</label>
-      <div class="seg" id="f_preset"><button type="button" data-v="photo" class="on">📷 일반 사진</button><button type="button" data-v="review">📝 후기 캡처</button></div>
+      <div class="seg" id="f_preset"><button type="button" data-v="photo" class="on">📷 일반 사진</button><button type="button" data-v="review">📝 후기 캡처</button><button type="button" data-v="reels">🎬 릴스 표지</button></div>
       <p class="hint">'후기 캡처'는 사진을 자르지 않고 카드처럼 넣고, REVIEW 문구도 자동으로 들어가요 (고칠 수 있어요)</p>
       <div id="reviewBgRow" hidden>
         <label style="margin-top:10px">후기 배경</label>
@@ -190,8 +205,8 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     </div>
     <div class="field">
       <button type="button" class="pick" id="pickBtn">📷 사진 선택하기 (여러 장 가능)</button>
-      <input type="file" id="fileInput" accept="image/*" multiple hidden>
-      <p class="hint" style="text-align:center" id="pickHint">최대 10장 · 이 버튼이나 미리보기에 끌어다 놓아도 돼요</p>
+      <input type="file" id="fileInput" accept="image/*,video/*" multiple hidden>
+      <p class="hint" style="text-align:center" id="pickHint">최대 10장 · 영상을 고르면 표지로 쓸 장면을 고를 수 있어요</p>
       <div class="strip" id="strip"></div>
       <div class="order" id="orderRow" hidden><button type="button" id="mvLeft">◀ 앞으로</button><button type="button" id="mvRight">뒤로 ▶</button></div>
       <p class="hint" id="orderHint" hidden>사진을 끌어서 순서를 바꿀 수 있어요 (폰은 길게 누른 뒤 끌기)</p>
@@ -213,7 +228,9 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
         <div class="order"><button type="button" id="blurClear">이 사진 가리기 모두 지우기</button></div>
       </div>
     </div>
-    <div class="field"><label>비율</label><select id="f_ratio"></select><p class="hint">사진에 맞춰 자동으로 추천해요. 여러 장은 모두 같은 비율로 만들어져요</p></div>
+    <div class="field"><label>비율</label><select id="f_ratio"></select><p class="hint">사진에 맞춰 자동으로 추천해요. 여러 장은 모두 같은 비율로 만들어져요</p>
+      <label class="chk" id="reelsSafeRow" hidden><input type="checkbox" id="f_reelsSafe" checked> 피드 격자에 맞추기 <span>— 피드에선 위아래가 잘려서, 제목·로고를 점선 안(피드에 보이는 영역)으로 옮겨요</span></label>
+    </div>
     <div class="field">
       <label>사진 맞춤</label>
       <div class="seg" id="f_fit"><button type="button" data-v="cover" class="on">꽉 채우기</button><button type="button" data-v="contain">전체 넣기</button></div>
@@ -242,7 +259,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     <p class="hint" style="text-align:center;margin:0" id="dimHint"></p>
   </div>
   <div class="preview-outer">
-    <div class="preview-wrap empty" id="previewWrap"><div class="drag-hint" id="dragHint">🖐️ 드래그해서 사진 위치 조정</div><div class="blur-layer" id="blurLayer" hidden></div>
+    <div class="preview-wrap empty" id="previewWrap"><div class="drag-hint" id="dragHint">🖐️ 드래그해서 사진 위치 조정</div><div class="blur-layer" id="blurLayer" hidden></div><div class="feed-guide" id="feedGuide" hidden><span>피드에 보이는 영역</span></div>
       <div id="posterRoot">
         <div class="p-photo">
           <img class="p-bg" alt="" hidden>
@@ -269,6 +286,12 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
       <p class="hint">기존 게시물은 최신 것부터 골라 주세요. 기억한 게시물은 이 기기에만 저장되고, ×로 지울 수 있어요</p>
     </div>
   </div>
+</div>
+<div class="crop-ov vid-ov" id="vidOv" hidden>
+  <div class="crop-top"><b>🎬 표지로 쓸 장면 고르기</b><br>막대를 움직여 장면을 고르세요</div>
+  <video id="vidEl" playsinline muted preload="auto"></video>
+  <div class="vid-seek"><input type="range" id="vidSeek" min="0" max="1" step="0.01" value="0"><div class="t" id="vidTime">0:00 / 0:00</div></div>
+  <div class="crop-bar"><div class="crop-actions"><button type="button" id="vidCancel">취소</button><button type="button" class="ok" id="vidPick">✓ 이 장면으로</button></div></div>
 </div>
 <div class="crop-ov" id="cropOv" hidden>
   <div class="crop-top"><b>사진 자르기</b><br>네모를 끌어 옮기고, 모서리 점으로 크기를 바꾸세요</div>
@@ -329,6 +352,17 @@ function applyRatio(){
   wrap.style.height = (r.h * previewScale) + "px";
   if(typeof renderBoxes === "function") requestAnimationFrame(renderBoxes);
   $("dimHint").textContent = `${r.w} × ${r.h}px (${r.use})`;
+  /* 9:16(릴스·스토리)은 피드 격자에서 가운데 3:4만 보임 → 그 영역을 점선으로 표시하고, 원하면 제목·로고를 그 안으로 */
+  const tall = $("f_ratio").value === "9:16";
+  $("reelsSafeRow").hidden = !tall;
+  root.classList.toggle("reels-safe", tall && $("f_reelsSafe").checked);
+  const guide = $("feedGuide");
+  guide.hidden = !tall;
+  if(tall){
+    const cropH = r.w * 4 / 3, top = (r.h - cropH) / 2;
+    guide.style.top = top * previewScale + "px";
+    guide.style.height = cropH * previewScale + "px";
+  }
   /* 가로형은 화면이 넓어서 로고·글자를 키움, 스토리처럼 아주 긴 세로형은 너무 커지지 않게 */
   const wide = r.w > r.h;
   root.style.setProperty("--k", wide ? 1.4 : 1);
@@ -531,8 +565,17 @@ function readImage(file){
   });
 }
 async function addFiles(fileList){
-  let files = [...fileList].filter(f => f && f.type.startsWith("image/"));
-  if(!files.length){ if(fileList.length) alert("사진(이미지) 파일만 올릴 수 있어요."); return; }
+  /* 영상은 장면을 골라 사진(표지)으로 바꿔서 넣음 */
+  const picked = [];
+  for(const f of [...fileList]){
+    if(!f) continue;
+    if(f.type.startsWith("video/") || /\.(mp4|mov|m4v|webm)$/i.test(f.name)){
+      const frame = await pickVideoFrame(f);
+      if(frame) picked.push(frame);
+    }else if(f.type.startsWith("image/")) picked.push(f);
+  }
+  let files = picked;
+  if(!files.length){ if(fileList.length && ![...fileList].some(f => f && (f.type.startsWith("video/") || /\.(mp4|mov|m4v|webm)$/i.test(f.name)))) alert("사진이나 영상 파일만 올릴 수 있어요."); return; }
   const room = MAX_PHOTOS - photos.length;
   if(files.length > room){
     alert(`사진은 최대 ${MAX_PHOTOS}장까지 넣을 수 있어요. 앞의 ${room}장만 넣을게요.`);
@@ -544,6 +587,7 @@ async function addFiles(fileList){
   const first = !photos.length;
   /* 첫 사진에 맞춰 비율 추천 */
   if(first && !ratioManuallySet) recommendRatio(loaded[0]);
+  applyRatio(); // 비율·로고 띠 높이를 먼저 맞춘 뒤 사진 크기를 계산
   loaded.forEach(fitPhoto);
   photos.push(...loaded);
   clearPending();
@@ -717,6 +761,7 @@ document.addEventListener("paste", e => {
 ["f_title","f_sub"].forEach(id => $(id).addEventListener("input", onTextInput));
 $("f_foot").addEventListener("input", syncText);
 $("f_ratio").addEventListener("change", () => { ratioManuallySet = true; applyRatio(); photos.forEach(fitPhoto); show(cur); });
+$("f_reelsSafe").addEventListener("change", () => { applyRatio(); photos.forEach(fitPhoto); show(cur); });
 $("f_zoom").addEventListener("input", e => { if(!P()) return; P().zoom = Number(e.target.value)/100; P().manual = true; applyImgTransform(); });
 function wireSeg(id, onPick){
   $(id).addEventListener("click", e => {
@@ -762,6 +807,14 @@ function setTextInputs(title, sub){ $("f_title").value = title; $("f_sub").value
 /* 용도 버튼 = 사진 맞춤·배경·글자 색을 한 번에 고르는 단축키 (그 뒤에 각각 따로 바꿔도 됨) */
 const pickSeg = (id, v) => document.querySelector(`#${id} [data-v="${v}"]`).click();
 wireSeg("f_preset", v => {
+  /* 릴스 표지: 9:16 + 피드 격자 맞춤. 다른 용도로 바꾸면 비율 자동 추천으로 돌아감 */
+  if(v === "reels"){
+    $("f_ratio").value = "9:16"; ratioManuallySet = true; $("f_reelsSafe").checked = true;
+  }else if(ratioManuallySet && $("f_ratio").value === "9:16"){
+    ratioManuallySet = false;
+    if(photos[0]) recommendRatio(photos[0]);
+  }
+  applyRatio();
   if(v === "review"){
     pickSeg("f_fit", "contain"); pickSeg("f_bgMode", reviewBg); pickSeg("f_textColor", "pink"); pickSeg("f_shade", "none");
     $("reviewBgRow").hidden = false;
@@ -773,6 +826,8 @@ wireSeg("f_preset", v => {
     /* 기본 문구를 안 고쳤으면 일반 사진으로 돌아갈 때 지움 */
     if($("f_title").value === REVIEW_TEXT.title && $("f_sub").value === REVIEW_TEXT.sub) setTextInputs("", "");
   }
+  /* 비율·로고 띠가 바뀌었을 수 있으니 사진 크기 다시 맞춤 (cover로 바뀐 경우 f_fit에서 이미 맞췄어도 한 번 더) */
+  photos.forEach(fitPhoto); show(cur);
 });
 wireSeg("f_pos", v => { root.classList.remove("pos-top", "pos-mid", "pos-bottom"); root.classList.add("pos-" + v); autoRefit(); });
 wireSeg("f_align", v => { root.classList.remove("align-left", "align-center"); root.classList.add("align-" + v); });
@@ -950,6 +1005,45 @@ $("f_blurLevel").addEventListener("input", e => {
   clearTimeout(levelTimer);
   levelTimer = setTimeout(rebuildAll, 150);
 });
+
+/* ---------- 영상에서 표지 장면 고르기 ---------- */
+/* 영상을 띄워 막대로 장면을 고르면 그 장면을 JPG 사진으로 만들어 돌려줌 (취소하면 null) */
+function pickVideoFrame(file){
+  return new Promise(resolve => {
+    const ov = $("vidOv"), v = $("vidEl"), seek = $("vidSeek");
+    const url = URL.createObjectURL(file);
+    const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+    const done = result => {
+      ov.hidden = true; document.body.style.overflow = "";
+      v.pause(); v.removeAttribute("src"); v.load();
+      URL.revokeObjectURL(url);
+      $("vidPick").onclick = $("vidCancel").onclick = seek.oninput = v.onloadedmetadata = v.onerror = null;
+      resolve(result);
+    };
+    v.onerror = () => { alert("이 영상은 브라우저에서 열 수 없어요.\n(아이폰 고화질 영상이면 '설정 > 카메라 > 포맷 > 높은 호환성'으로 찍거나, 영상 대신 캡처한 사진을 넣어 주세요)"); done(null); };
+    v.onloadedmetadata = () => {
+      seek.max = v.duration || 0;
+      /* 첫 장면은 검은 화면일 때가 많아서 조금 뒤로 */
+      const t = Math.min(1, (v.duration || 0) / 3);
+      seek.value = t; v.currentTime = t;
+      $("vidTime").textContent = `${fmt(t)} / ${fmt(v.duration || 0)}`;
+    };
+    seek.oninput = () => { v.currentTime = Number(seek.value); $("vidTime").textContent = `${fmt(Number(seek.value))} / ${fmt(v.duration || 0)}`; };
+    $("vidCancel").onclick = () => done(null);
+    $("vidPick").onclick = async () => {
+      if(!v.videoWidth){ alert("영상이 아직 준비되지 않았어요. 잠시 후 다시 눌러 주세요."); return; }
+      const c = document.createElement("canvas");
+      c.width = v.videoWidth; c.height = v.videoHeight;
+      c.getContext("2d").drawImage(v, 0, 0);
+      const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.95));
+      done(new File([blob], file.name.replace(/\.[^.]+$/, "") + "_표지.jpg", {type:"image/jpeg"}));
+    };
+    v.src = url;
+    /* 아이폰은 한 번 재생해야 장면이 그려져서, 소리 없이 잠깐 재생했다가 멈춤 */
+    v.play().then(() => v.pause()).catch(() => {});
+    ov.hidden = false; document.body.style.overflow = "hidden";
+  });
+}
 
 /* ---------- 사진 자르기 ---------- */
 /* 사진 모양에 맞는 비율 추천 */
