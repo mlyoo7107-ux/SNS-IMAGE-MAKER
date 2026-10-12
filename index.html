@@ -28,9 +28,14 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .pick:disabled{opacity:.5;cursor:not-allowed}
 
 /* 올린 사진 목록 */
-.strip{display:flex;gap:8px;overflow-x:auto;padding:8px 2px 4px;margin-top:10px}
+.strip{position:relative;display:flex;gap:8px;overflow-x:auto;padding:8px 2px 4px;margin-top:10px}
 .strip:empty{display:none}
-.th{position:relative;flex:none;width:64px;height:64px;border-radius:10px;overflow:visible;cursor:pointer}
+.th{position:relative;flex:none;width:64px;height:64px;border-radius:10px;overflow:visible;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.th img{-webkit-user-drag:none;pointer-events:none}
+/* 끌어서 순서 바꾸기 */
+.th.lifting{z-index:5;cursor:grabbing;opacity:.9;filter:drop-shadow(0 6px 10px rgba(0,0,0,.3))}
+.th.lifting img{transform:scale(1.08)}
+.drop-mark{position:absolute;top:8px;width:4px;height:64px;border-radius:2px;background:var(--a);pointer-events:none}
 .th img{width:100%;height:100%;object-fit:cover;border-radius:10px;display:block;border:2px solid transparent;background:var(--l)}
 .th.on img{border-color:var(--a)}
 .th .no{position:absolute;bottom:3px;left:3px;background:rgba(23,21,18,.65);color:#fff;font-size:10px;font-weight:bold;padding:1px 5px;border-radius:7px}
@@ -107,6 +112,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
       <p class="hint" style="text-align:center" id="pickHint">최대 10장 · 이 버튼이나 미리보기에 끌어다 놓아도 돼요</p>
       <div class="strip" id="strip"></div>
       <div class="order" id="orderRow" hidden><button type="button" id="mvLeft">◀ 앞으로</button><button type="button" id="mvRight">뒤로 ▶</button></div>
+      <p class="hint" id="orderHint" hidden>사진을 끌어서 순서를 바꿀 수 있어요 (폰은 길게 누른 뒤 끌기)</p>
     </div>
     <div class="field" id="blurField" hidden>
       <label>얼굴 가리기 <span id="blurFor"></span></label>
@@ -277,6 +283,7 @@ function renderStrip(){
   const n = photos.length;
   $("strip").innerHTML = photos.map((p, i) => `<div class="th${i === cur ? " on" : ""}" data-i="${i}"><img src="${p.url}" alt=""><span class="no">${i + 1}</span><button type="button" class="x" data-x="${i}" aria-label="${i + 1}번 사진 빼기">×</button></div>`).join("");
   $("orderRow").hidden = n < 2;
+  $("orderHint").hidden = n < 2;
   $("mvLeft").disabled = cur <= 0;
   $("mvRight").disabled = cur >= n - 1;
   $("pvNav").hidden = n < 2;
@@ -368,7 +375,81 @@ function move(d){
 
 $("pickBtn").onclick = () => $("fileInput").click();
 $("fileInput").onchange = e => { addFiles(e.target.files); e.target.value = ""; };
+/* 썸네일 끌어서 순서 바꾸기 — 마우스는 바로, 터치는 길게 누른 뒤(그냥 쓸면 목록 스크롤) */
+let suppressClick = false;
+(function wireReorder(){
+  const strip = $("strip");
+  let st = null; // {el, from, pointerId, x0, y0, type, timer, dragging, to, mark}
+  function begin(){
+    st.dragging = true;
+    st.el.classList.add("lifting");
+    st.mark = document.createElement("div");
+    st.mark.className = "drop-mark";
+    strip.appendChild(st.mark);
+    try{ st.el.setPointerCapture(st.pointerId); }catch(e){}
+    if(navigator.vibrate && st.type === "touch") navigator.vibrate(15);
+  }
+  function update(x){
+    st.el.style.transform = `translateX(${x - st.x0}px)`;
+    /* 끌고 있는 사진을 뺀 나머지 중 손가락보다 왼쪽에 있는 개수 = 놓을 자리 */
+    const others = [...strip.querySelectorAll(".th")].filter(t => t !== st.el);
+    let to = 0;
+    others.forEach(t => { const r = t.getBoundingClientRect(); if(x > r.left + r.width / 2) to++; });
+    st.to = to;
+    const sr = strip.getBoundingClientRect();
+    const ref = others[to] || others[others.length - 1];
+    const rr = ref.getBoundingClientRect();
+    const left = (others[to] ? rr.left - 6 : rr.right + 2) - sr.left + strip.scrollLeft;
+    st.mark.style.left = left + "px";
+    /* 끝에 가까우면 목록을 저절로 넘김 */
+    if(x < sr.left + 30) strip.scrollLeft -= 8;
+    else if(x > sr.right - 30) strip.scrollLeft += 8;
+  }
+  function finish(drop){
+    if(!st) return;
+    clearTimeout(st.timer);
+    if(st.dragging){
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+      st.mark.remove();
+      st.el.classList.remove("lifting");
+      st.el.style.transform = "";
+      if(drop && st.to !== st.from){
+        const curP = P();
+        const [moved] = photos.splice(st.from, 1);
+        photos.splice(st.to, 0, moved);
+        clearPending();
+        st = null;
+        show(photos.indexOf(curP));
+        return;
+      }
+    }
+    st = null;
+  }
+  strip.addEventListener("pointerdown", e => {
+    const th = e.target.closest(".th");
+    if(!th || e.target.closest(".x") || photos.length < 2) return;
+    if(e.pointerType === "mouse" && e.button !== 0) return;
+    st = {el:th, from:Number(th.dataset.i), pointerId:e.pointerId, x0:e.clientX, y0:e.clientY, type:e.pointerType, dragging:false, to:Number(th.dataset.i)};
+    if(e.pointerType !== "mouse") st.timer = setTimeout(() => { if(st && !st.dragging) begin(); }, 350);
+  });
+  strip.addEventListener("pointermove", e => {
+    if(!st || e.pointerId !== st.pointerId) return;
+    const moved = Math.hypot(e.clientX - st.x0, e.clientY - st.y0);
+    if(!st.dragging){
+      if(st.type === "mouse"){ if(moved > 5) begin(); else return; }
+      else { if(moved > 8){ clearTimeout(st.timer); st = null; } return; } // 길게 누르기 전에 움직이면 스크롤로 봄
+    }
+    update(e.clientX);
+  });
+  strip.addEventListener("pointerup", () => finish(true));
+  strip.addEventListener("pointercancel", () => finish(false));
+  /* 끄는 중엔 목록이 스크롤되지 않게 */
+  strip.addEventListener("touchmove", e => { if(st && st.dragging) e.preventDefault(); }, {passive:false});
+  strip.addEventListener("contextmenu", e => { if(e.target.closest(".th")) e.preventDefault(); });
+})();
 $("strip").addEventListener("click", e => {
+  if(suppressClick) return;
   const x = e.target.closest("[data-x]");
   if(x){ removePhoto(Number(x.dataset.x)); return; }
   const th = e.target.closest(".th");
