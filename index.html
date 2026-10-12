@@ -50,6 +50,16 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .preview-wrap.empty{cursor:pointer;touch-action:auto}
 .drag-hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:5px 10px;border-radius:12px;pointer-events:none;z-index:5;white-space:nowrap}
 .preview-wrap.empty .drag-hint{display:none}
+/* 얼굴 가리기 */
+.blur-btn{width:100%;padding:11px;border:1px solid var(--l);border-radius:10px;background:white;font-size:13.5px;font-weight:bold;font-family:inherit;cursor:pointer;color:var(--t)}
+.blur-btn.on{border-color:var(--a);background:var(--a);color:#fff}
+.blur-layer{position:absolute;inset:0;z-index:6;pointer-events:none}
+.preview-wrap.blurring{cursor:crosshair}
+.bbox{position:absolute;border:2px dashed #fff;box-shadow:0 0 0 1px rgba(0,0,0,.55);border-radius:4px;pointer-events:auto;cursor:move;background:rgba(255,45,134,.15);touch-action:none}
+.bbox.on{border:2px solid var(--a)}
+.bbox .h{position:absolute;right:-11px;bottom:-11px;width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--a);cursor:nwse-resize}
+.bbox .bx{position:absolute;right:-11px;top:-11px;width:22px;height:22px;border-radius:50%;background:#c0392b;color:#fff;border:0;font-size:13px;line-height:22px;text-align:center;padding:0;cursor:pointer}
+.blur-done{padding:9px 22px;border:0;border-radius:20px;background:var(--a);color:#fff;font-size:13.5px;font-weight:bold;font-family:inherit;cursor:pointer;box-shadow:0 3px 10px rgba(255,45,134,.35)}
 .pv-nav{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:bold;color:var(--m)}
 .pv-nav button{width:30px;height:30px;border-radius:50%;border:1px solid var(--l);background:white;cursor:pointer;font-size:13px;color:var(--t)}
 .pv-nav button:disabled{opacity:.35;cursor:not-allowed}
@@ -98,6 +108,15 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
       <div class="strip" id="strip"></div>
       <div class="order" id="orderRow" hidden><button type="button" id="mvLeft">◀ 앞으로</button><button type="button" id="mvRight">뒤로 ▶</button></div>
     </div>
+    <div class="field" id="blurField" hidden>
+      <label>얼굴 가리기 <span id="blurFor"></span></label>
+      <button type="button" class="blur-btn" id="blurBtn">🙈 얼굴 가리기</button>
+      <div id="blurOpts" hidden>
+        <p class="hint" style="margin:6px 0 8px">미리보기에서 <b>가릴 곳을 누르거나 드래그</b>하세요. 네모를 끌면 옮겨지고, 오른쪽 아래 점으로 크기를 바꿔요</p>
+        <div class="seg" id="f_blurType"><button type="button" data-v="blur" class="on">블러</button><button type="button" data-v="mosaic">모자이크</button></div>
+        <div class="order"><button type="button" id="blurClear">이 사진 가리기 모두 지우기</button></div>
+      </div>
+    </div>
     <div class="field"><label>비율</label><select id="f_ratio"></select><p class="hint">사진에 맞춰 자동으로 추천해요. 여러 장은 모두 같은 비율로 만들어져요</p></div>
     <div class="field"><label>확대 <span id="zoomFor"></span></label><input type="range" id="f_zoom" min="100" max="250" value="100" style="width:100%;padding:0;border:0"><p class="hint">미리보기를 드래그하면 위치도 옮길 수 있어요 (폰은 두 손가락으로 확대)</p></div>
     <div class="field"><label>제목</label><textarea id="f_title" rows="2" placeholder="이미지에 넣을 제목을 입력하세요"></textarea><p class="hint">줄을 바꾸면 이미지에서도 줄이 바뀌어요</p></div>
@@ -112,7 +131,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     <p class="hint" style="text-align:center;margin:0" id="dimHint"></p>
   </div>
   <div class="preview-outer">
-    <div class="preview-wrap empty" id="previewWrap"><div class="drag-hint">🖐️ 드래그해서 사진 위치 조정</div>
+    <div class="preview-wrap empty" id="previewWrap"><div class="drag-hint" id="dragHint">🖐️ 드래그해서 사진 위치 조정</div><div class="blur-layer" id="blurLayer" hidden></div>
       <div id="posterRoot">
         <div class="p-photo">
           <img id="o_img" alt="" hidden>
@@ -123,6 +142,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
         <div class="p-foot" id="o_foot"><img src="logo-colorm.png" alt="COLOR.M"><div class="r" id="o_footText"></div></div>
       </div>
     </div>
+    <button type="button" class="blur-done" id="blurDone" hidden>✓ 가리기 완료</button>
     <div class="pv-nav" id="pvNav" hidden><button type="button" id="pvPrev" aria-label="이전 사진">◀</button><span id="pvCount"></span><button type="button" id="pvNext" aria-label="다음 사진">▶</button></div>
   </div>
 </div>
@@ -168,6 +188,7 @@ function applyRatio(){
   const wrap = $("previewWrap");
   wrap.style.width = viewW + "px";
   wrap.style.height = (r.h * previewScale) + "px";
+  if(typeof renderBoxes === "function") requestAnimationFrame(renderBoxes);
   $("dimHint").textContent = `${r.w} × ${r.h}px (${r.use})`;
   /* 가로형은 화면이 넓어서 로고·글자를 키움, 스토리처럼 아주 긴 세로형은 너무 커지지 않게 */
   const wide = r.w > r.h;
@@ -201,7 +222,7 @@ function placeImg(img, p){
   img.style.height = effH + "px";
   img.style.transform = `translate(-50%,-50%) translate(${p.panX}px, ${p.panY}px)`;
 }
-function applyImgTransform(){ if(P()) placeImg($("o_img"), P()); }
+function applyImgTransform(){ if(P()) placeImg($("o_img"), P()); renderBoxes(); }
 
 /* 글자·하단 문구를 포스터(미리보기 또는 저장용 복제본)에 적용. withText=false면 로고만 */
 function fillText(root, withText){
@@ -236,11 +257,15 @@ function renderStrip(){
   $("pickBtn").disabled = n >= MAX_PHOTOS;
   $("downloadBtn").disabled = !n;
   $("saveOneBtn").hidden = n < 2;
+  $("blurField").hidden = !n;
+  $("blurFor").textContent = n > 1 ? `(${cur + 1}번 사진)` : "";
+  if(!n && blurMode) setBlurMode(false);
   if(!pendingFiles) $("downloadBtn").textContent = saveLabel();
   const on = $("strip").querySelector(".th.on");
   if(on) on.scrollIntoView({block:"nearest", inline:"nearest"});
 }
 function show(i){
+  if(i !== cur) selBox = -1;
   cur = i;
   const p = P(), img = $("o_img");
   if(p){
@@ -254,6 +279,7 @@ function show(i){
   $("previewWrap").classList.toggle("empty", !p);
   syncText();
   renderStrip();
+  renderBoxes();
 }
 
 /* ---------- 사진 불러오기 ---------- */
@@ -261,7 +287,8 @@ function readImage(file){
   return new Promise(resolve => {
     const url = URL.createObjectURL(file);
     const probe = new Image();
-    probe.onload = () => resolve({url, name:file.name.replace(/\.[^.]+$/, ""), naturalW:probe.naturalWidth, naturalH:probe.naturalHeight});
+    /* url = 화면·저장에 쓰는 사진(가리기가 있으면 가린 사진), srcUrl·el = 원본 */
+    probe.onload = () => resolve({url, srcUrl:url, el:probe, blurs:[], ready:Promise.resolve(), name:file.name.replace(/\.[^.]+$/, ""), naturalW:probe.naturalWidth, naturalH:probe.naturalHeight});
     probe.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
     probe.src = url;
   });
@@ -290,7 +317,8 @@ async function addFiles(fileList){
   show(first ? 0 : photos.length - loaded.length);
 }
 function removePhoto(i){
-  URL.revokeObjectURL(photos[i].url);
+  if(photos[i].url !== photos[i].srcUrl) URL.revokeObjectURL(photos[i].url);
+  URL.revokeObjectURL(photos[i].srcUrl);
   photos.splice(i, 1);
   clearPending();
   applyRatio();
@@ -344,6 +372,7 @@ document.addEventListener("paste", e => {
   }
   wrap.addEventListener("pointerdown", e => {
     if(!P()){ $("fileInput").click(); return; } // 사진이 없으면 눌러서 선택
+    if(blurMode) return; // 얼굴 가리기 중엔 사진 대신 가리개를 다룸
     if(e.pointerType === "mouse" && e.button !== 0) return;
     wrap.setPointerCapture(e.pointerId);
     pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
@@ -395,6 +424,159 @@ wireSeg("f_align", v => { root.classList.remove("align-left", "align-center"); r
 document.querySelector(".panel").addEventListener("input", clearPending);
 document.querySelector(".panel").addEventListener("change", clearPending);
 window.addEventListener("resize", applyRatio);
+
+/* ---------- 얼굴 가리기 ---------- */
+/* 가리개는 사진 기준 비율(0~1)로 저장 — 위치·확대를 바꿔도 같은 곳을 가림.
+   저장 이미지 도구(html2canvas)가 CSS 블러를 못 그려서, 가린 사진을 새로 만들어 그 사진을 씀 */
+let blurMode = false;
+let blurType = "blur";
+let selBox = -1;
+const MAX_SIDE = 3000; // 가린 사진의 최대 크기 — 폰 메모리 보호
+
+function setBlurMode(on){
+  blurMode = on;
+  selBox = -1;
+  $("blurBtn").classList.toggle("on", on);
+  $("blurBtn").textContent = on ? "✓ 가리기 완료" : "🙈 얼굴 가리기";
+  $("blurOpts").hidden = !on;
+  $("blurDone").hidden = !on;
+  $("blurLayer").hidden = !on;
+  $("previewWrap").classList.toggle("blurring", on);
+  $("dragHint").textContent = on ? "👆 가릴 곳을 누르거나 드래그하세요" : "🖐️ 드래그해서 사진 위치 조정";
+  renderBoxes();
+}
+
+/* 가리개 네모를 미리보기 위에 그림 (저장 이미지에는 안 들어감) */
+function renderBoxes(){
+  const layer = $("blurLayer");
+  if(!blurMode || !P()){ layer.innerHTML = ""; return; }
+  const ir = $("o_img").getBoundingClientRect(), wr = $("previewWrap").getBoundingClientRect();
+  layer.innerHTML = P().blurs.map((b, i) => `<div class="bbox${i === selBox ? " on" : ""}" data-b="${i}" style="left:${ir.left - wr.left + b.x * ir.width}px;top:${ir.top - wr.top + b.y * ir.height}px;width:${b.w * ir.width}px;height:${b.h * ir.height}px"><button type="button" class="bx" aria-label="가리기 지우기">×</button><span class="h"></span></div>`).join("");
+}
+
+/* 원본 사진에 가리개를 입혀 새 사진을 만듦. 여러 번 바뀌어도 순서대로 처리 */
+function rebuild(p){
+  p.ready = p.ready.then(() => bake(p)).catch(() => {});
+  return p.ready;
+}
+async function bake(p){
+  let url = p.srcUrl;
+  if(p.blurs.length){
+    const s = Math.min(1, MAX_SIDE / Math.max(p.naturalW, p.naturalH));
+    const W = Math.round(p.naturalW * s), H = Math.round(p.naturalH * s);
+    const c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    g.drawImage(p.el, 0, 0, W, H);
+    for(const b of p.blurs) coverArea(g, c, p.el, Math.round(b.x * W), Math.round(b.y * H), Math.max(2, Math.round(b.w * W)), Math.max(2, Math.round(b.h * H)), W, H);
+    const blob = await new Promise(res => c.toBlob(res, "image/jpeg", 0.95));
+    url = URL.createObjectURL(blob);
+  }
+  const old = p.url;
+  p.url = url;
+  if(old !== p.srcUrl && old !== url) URL.revokeObjectURL(old);
+  if(P() === p) $("o_img").src = url;
+  const th = $("strip").querySelector(`.th[data-i="${photos.indexOf(p)}"] img`);
+  if(th) th.src = url;
+}
+/* 캔버스 블러(filter)는 일부 아이폰에서 안 돼서, 없으면 줄였다 키우는 방식으로 흐리게 */
+const CAN_FILTER = (() => { try{ const g = document.createElement("canvas").getContext("2d"); g.filter = "blur(2px)"; return g.filter === "blur(2px)"; }catch(e){ return false; } })();
+function coverArea(g, c, src, x, y, w, h, W, H){
+  const m = Math.min(w, h);
+  g.save();
+  g.beginPath(); g.rect(x, y, w, h); g.clip();
+  if(blurType === "mosaic"){
+    /* 모자이크: 작게 줄인 뒤 부드럽게 하지 않고 키움 → 네모 칸 */
+    const block = Math.max(8, Math.round(m / 6)); // 6칸 정도 — 더 잘게 하면 눈·입이 알아보여서
+    const t = document.createElement("canvas");
+    t.width = Math.max(1, Math.ceil(w / block)); t.height = Math.max(1, Math.ceil(h / block));
+    t.getContext("2d").drawImage(src, x / W * src.naturalWidth, y / H * src.naturalHeight, w / W * src.naturalWidth, h / H * src.naturalHeight, 0, 0, t.width, t.height);
+    g.imageSmoothingEnabled = false;
+    g.drawImage(t, x, y, t.width * block, t.height * block);
+  }else if(CAN_FILTER){
+    g.filter = `blur(${Math.max(8, Math.round(m / 7))}px)`;
+    g.drawImage(src, 0, 0, W, H);
+  }else{
+    /* 블러 대체: 아주 작게 줄였다가 부드럽게 두 번 키움 */
+    const pad = Math.round(m / 4);
+    const sx = Math.max(0, x - pad), sy = Math.max(0, y - pad), sw = Math.min(W - sx, w + pad * 2), sh = Math.min(H - sy, h + pad * 2);
+    const cell = Math.max(4, m / 4); // 가린 곳에 4칸 정도만 남기고 뭉갬 → 눈·코·입이 안 보이게
+    const t1 = document.createElement("canvas"); t1.width = Math.max(1, Math.round(sw / cell)); t1.height = Math.max(1, Math.round(sh / cell));
+    const t2 = document.createElement("canvas"); t2.width = t1.width * 4; t2.height = t1.height * 4;
+    t1.getContext("2d").drawImage(src, sx / W * src.naturalWidth, sy / H * src.naturalHeight, sw / W * src.naturalWidth, sh / H * src.naturalHeight, 0, 0, t1.width, t1.height);
+    const g2 = t2.getContext("2d"); g2.imageSmoothingQuality = "high"; g2.drawImage(t1, 0, 0, t2.width, t2.height);
+    g.imageSmoothingQuality = "high";
+    g.drawImage(t2, sx, sy, sw, sh);
+  }
+  g.restore();
+}
+
+(function wireBlur(){
+  const wrap = $("previewWrap");
+  let op = null; // {type:"new"|"move"|"resize", i, anchor, start, orig}
+  const norm = e => { const r = $("o_img").getBoundingClientRect(); return {x:(e.clientX - r.left) / r.width, y:(e.clientY - r.top) / r.height, r}; };
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  wrap.addEventListener("pointerdown", e => {
+    if(!blurMode || !P()) return;
+    e.preventDefault();
+    const bxBtn = e.target.closest(".bx");
+    if(bxBtn){
+      P().blurs.splice(Number(bxBtn.parentElement.dataset.b), 1);
+      selBox = -1; clearPending(); rebuild(P()); renderBoxes();
+      return;
+    }
+    wrap.setPointerCapture(e.pointerId);
+    const pt = norm(e), boxEl = e.target.closest(".bbox");
+    if(boxEl){
+      const i = Number(boxEl.dataset.b);
+      selBox = i;
+      op = {type: e.target.classList.contains("h") ? "resize" : "move", i, start:pt, orig:{...P().blurs[i]}, moved:false};
+    }else{
+      P().blurs.push({x:clamp01(pt.x), y:clamp01(pt.y), w:0, h:0});
+      selBox = P().blurs.length - 1;
+      op = {type:"new", i:selBox, start:pt, moved:false};
+    }
+    renderBoxes();
+  });
+  wrap.addEventListener("pointermove", e => {
+    if(!op) return;
+    const pt = norm(e), b = P().blurs[op.i];
+    const dx = pt.x - op.start.x, dy = pt.y - op.start.y;
+    if(Math.abs(dx * pt.r.width) + Math.abs(dy * pt.r.height) > 4) op.moved = true;
+    if(op.type === "new"){
+      const x1 = clamp01(pt.x), y1 = clamp01(pt.y), x0 = clamp01(op.start.x), y0 = clamp01(op.start.y);
+      b.x = Math.min(x0, x1); b.y = Math.min(y0, y1); b.w = Math.abs(x1 - x0); b.h = Math.abs(y1 - y0);
+    }else if(op.type === "move"){
+      b.x = Math.max(0, Math.min(1 - b.w, op.orig.x + dx));
+      b.y = Math.max(0, Math.min(1 - b.h, op.orig.y + dy));
+    }else{
+      b.w = Math.max(0.02, Math.min(1 - b.x, op.orig.w + dx));
+      b.h = Math.max(0.02, Math.min(1 - b.y, op.orig.h + dy));
+    }
+    renderBoxes();
+  });
+  function end(){
+    if(!op) return;
+    const b = P().blurs[op.i];
+    const r = $("o_img").getBoundingClientRect();
+    /* 그냥 누르기만 했거나 너무 작게 그렸으면 → 누른 곳에 얼굴 크기 정사각형 */
+    if(op.type === "new" && (b.w * r.width < 14 || b.h * r.height < 14)){
+      const side = Math.min(r.width, r.height) * 0.22;
+      b.w = Math.min(1, side / r.width); b.h = Math.min(1, side / r.height);
+      b.x = Math.max(0, Math.min(1 - b.w, op.start.x - b.w / 2));
+      b.y = Math.max(0, Math.min(1 - b.h, op.start.y - b.h / 2));
+    }
+    const changed = op.type === "new" || op.moved;
+    op = null;
+    renderBoxes();
+    if(changed){ clearPending(); rebuild(P()); }
+  }
+  wrap.addEventListener("pointerup", end);
+  wrap.addEventListener("pointercancel", end);
+})();
+$("blurBtn").onclick = () => setBlurMode(!blurMode);
+$("blurDone").onclick = () => setBlurMode(false);
+$("blurClear").onclick = () => { if(!P() || !P().blurs.length) return; P().blurs = []; selBox = -1; clearPending(); rebuild(P()); renderBoxes(); };
+wireSeg("f_blurType", v => { blurType = v; photos.filter(p => p.blurs.length).forEach(rebuild); });
 
 /* ---------- 저장 ---------- */
 const saveLabel = () => photos.length > 1 ? `⬇️ ${photos.length}장 모두 저장` : "⬇️ PNG로 저장";
@@ -466,7 +648,7 @@ async function save(indexes){
   if(!indexes.length) return;
   btn.disabled = true; $("saveOneBtn").disabled = true;
   try{
-    await posterFontsReady();
+    await Promise.all([posterFontsReady(), ...photos.map(p => p.ready)]); // 가리기 처리가 끝난 사진으로 저장
     const files = [];
     for(const i of indexes){
       btn.textContent = indexes.length > 1 ? `만드는 중... (${files.length + 1}/${indexes.length})` : "만드는 중...";
