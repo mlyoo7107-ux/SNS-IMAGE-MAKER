@@ -130,9 +130,9 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     </div>
     <div class="field"><label>비율</label><select id="f_ratio"></select><p class="hint">사진에 맞춰 자동으로 추천해요. 여러 장은 모두 같은 비율로 만들어져요</p></div>
     <div class="field"><label>확대 <span id="zoomFor"></span></label><input type="range" id="f_zoom" min="100" max="250" value="100" style="width:100%;padding:0;border:0"><p class="hint">미리보기를 드래그하면 위치를 옮길 수 있어요. 많이 옮기고 싶으면 확대를 키우고, 사진 전체를 넣고 싶으면 왼쪽 끝까지 줄이세요 (빈 곳은 흐린 배경으로 채워져요)</p></div>
-    <div class="field"><label>제목</label><textarea id="f_title" rows="2" placeholder="이미지에 넣을 제목을 입력하세요"></textarea><p class="hint">줄을 바꾸면 이미지에서도 줄이 바뀌어요</p></div>
-    <div class="field"><label>작은 글씨 <span>(선택)</span></label><input id="f_sub" placeholder="예: 2026 가을 컬러 수업 · 3학년 2반"></div>
-    <div class="field" id="textOnField" hidden><label>글자 넣을 사진</label><div class="seg" id="f_textOn"><button type="button" data-v="all" class="on">모든 사진</button><button type="button" data-v="first">첫 장만</button></div><p class="hint">'첫 장만'이면 나머지 사진엔 로고만 들어가요</p></div>
+    <div class="field" id="textOnField" hidden><label>사진별 글자</label><div class="seg" id="f_textOn"><button type="button" data-v="all" class="on">모두 같게</button><button type="button" data-v="first">첫 장만</button><button type="button" data-v="each">장마다 다르게</button></div><p class="hint">'장마다 다르게'는 위에서 사진을 고른 뒤 그 사진의 제목을 고쳐요. 제목을 비우면 그 사진엔 로고만 들어가요</p></div>
+    <div class="field"><label>제목 <span id="titleFor"></span></label><textarea id="f_title" rows="2" placeholder="이미지에 넣을 제목을 입력하세요"></textarea><p class="hint">줄을 바꾸면 이미지에서도 줄이 바뀌어요</p></div>
+    <div class="field"><label>작은 글씨 <span id="subFor">(선택)</span></label><input id="f_sub" placeholder="예: 2026 가을 컬러 수업 · 3학년 2반"></div>
     <div class="field"><label>글자 위치</label><div class="seg" id="f_pos"><button type="button" data-v="top">위</button><button type="button" data-v="mid">가운데</button><button type="button" data-v="bottom" class="on">아래</button></div></div>
     <div class="field"><label>정렬</label><div class="seg" id="f_align"><button type="button" data-v="left" class="on">왼쪽</button><button type="button" data-v="center">가운데</button></div></div>
     <div class="field"><label>글자 크기</label><div class="seg" id="f_size"><button type="button" data-v="0.8">작게</button><button type="button" data-v="1" class="on">보통</button><button type="button" data-v="1.25">크게</button></div></div>
@@ -269,21 +269,42 @@ function makeBg(el){
 }
 function applyImgTransform(){ if(P()) placeImg($("o_img"), P()); renderBoxes(); }
 
-/* 글자·하단 문구를 포스터(미리보기 또는 저장용 복제본)에 적용. withText=false면 로고만 */
-function fillText(root, withText){
+/* 제목·작은 글씨: "모두 같게"·"첫 장만"이면 shared, "장마다 다르게"면 사진마다 p.title·p.sub */
+const shared = {title:"", sub:""};
+function textOf(i){
+  if(textOn === "each") return {title:photos[i]?.title || "", sub:photos[i]?.sub || ""};
+  if(textOn === "first" && i > 0) return {title:"", sub:""};
+  return shared;
+}
+/* 글자·하단 문구를 i번 사진용으로 포스터(미리보기 또는 저장용 복제본)에 적용 */
+function fillText(root, i){
   const q = c => root.querySelector(c);
-  const title = $("f_title").value, sub = $("f_sub").value.trim(), foot = $("f_foot").value.trim();
-  q(".p-title").textContent = withText ? title : "";
-  q(".p-sub").textContent = withText ? sub : "";
-  q(".p-sub").style.display = withText && sub ? "" : "none";
+  const t = textOf(i), title = t.title, sub = t.sub.trim(), foot = $("f_foot").value.trim();
+  q(".p-title").textContent = title;
+  q(".p-sub").textContent = sub;
+  q(".p-sub").style.display = sub ? "" : "none";
   /* 글자가 없으면 사진을 어둡게 덮지 않음 */
-  q(".p-scrim").style.display = withText && (title.trim() || sub) ? "" : "none";
+  q(".p-scrim").style.display = title.trim() || sub ? "" : "none";
   q(".p-foot .r").textContent = foot;
   q(".p-foot .r").style.display = foot ? "" : "none";
   q(".p-foot").classList.toggle("solo", !foot);
 }
-const textFor = i => textOn === "all" || i === 0;
-function syncText(){ fillText($("posterRoot"), textFor(Math.max(cur, 0))); }
+function syncText(){ fillText($("posterRoot"), Math.max(cur, 0)); }
+/* 입력칸에 지금 편집 중인 글자를 보여줌 (장마다 다르게면 현재 사진의 글자) */
+function loadTextInputs(){
+  const t = textOn === "each" ? textOf(Math.max(cur, 0)) : shared;
+  $("f_title").value = t.title;
+  $("f_sub").value = t.sub;
+  const each = textOn === "each" && photos.length > 1;
+  $("titleFor").textContent = each ? `(${cur + 1}번 사진)` : "";
+  $("subFor").textContent = each ? `(${cur + 1}번 사진 · 선택)` : "(선택)";
+}
+function onTextInput(){
+  const target = textOn === "each" && P() ? P() : shared;
+  target.title = $("f_title").value;
+  target.sub = $("f_sub").value;
+  syncText();
+}
 
 /* ---------- 화면 갱신 ---------- */
 function renderStrip(){
@@ -325,6 +346,7 @@ function show(i){
   }
   $("o_empty").hidden = !!p;
   $("previewWrap").classList.toggle("empty", !p);
+  loadTextInputs();
   syncText();
   renderStrip();
   renderBoxes();
@@ -525,7 +547,8 @@ document.addEventListener("paste", e => {
 })();
 
 /* ---------- 입력칸 ---------- */
-["f_title","f_sub","f_foot"].forEach(id => $(id).addEventListener("input", syncText));
+["f_title","f_sub"].forEach(id => $(id).addEventListener("input", onTextInput));
+$("f_foot").addEventListener("input", syncText);
 $("f_ratio").addEventListener("change", () => { ratioManuallySet = true; applyRatio(); photos.forEach(fitPhoto); show(cur); });
 $("f_zoom").addEventListener("input", e => { if(!P()) return; P().zoom = Number(e.target.value)/100; applyImgTransform(); });
 function wireSeg(id, onPick){
@@ -537,7 +560,13 @@ function wireSeg(id, onPick){
   });
 }
 wireSeg("f_size", v => { textScale = Number(v); applyRatio(); });
-wireSeg("f_textOn", v => { textOn = v; syncText(); });
+wireSeg("f_textOn", v => {
+  /* 장마다 다르게로 바꾸면 각 사진이 지금 글자로 시작 — 바꿀 사진만 고치면 됨 */
+  if(v === "each" && textOn !== "each") photos.forEach(p => { if(p.title === undefined){ p.title = shared.title; p.sub = shared.sub; } });
+  textOn = v;
+  loadTextInputs();
+  syncText();
+});
 /* 포스터에 클래스로 적용 — 저장용 복제본도 그대로 따라감 */
 const root = $("posterRoot");
 root.classList.add("pos-bottom", "align-left");
@@ -753,12 +782,12 @@ function showSaveOverlay(srcs){
 /* 글꼴을 다 받기 전에 저장하면 기기 기본 글꼴로 찍힘 — 이미지에 쓰는 굵기·글자를 먼저 받아둠 (최대 3초) */
 function posterFontsReady(){
   if(!document.fonts) return Promise.resolve();
-  const text = $("f_title").value + $("f_sub").value + $("f_foot").value;
+  const text = photos.map((_, i) => textOf(i).title + textOf(i).sub).join("") + shared.title + shared.sub + $("f_foot").value;
   const loads = [400, 600, 700, 900].map(w => document.fonts.load(`${w} 24px "Noto Sans KR"`, text || "가"));
   return Promise.race([Promise.all(loads), new Promise(r => setTimeout(r, 3000))]).catch(() => {});
 }
 function baseName(){
-  const b = ($("f_title").value.trim().split("\n")[0] || photos[0]?.name || "colorm-sns").replace(/[^a-zA-Z0-9가-힣]+/g, "_").replace(/^_|_$/g, "");
+  const b = ((textOn === "each" ? photos[0]?.title || "" : shared.title).trim().split("\n")[0] || photos[0]?.name || "colorm-sns").replace(/[^a-zA-Z0-9가-힣]+/g, "_").replace(/^_|_$/g, "");
   return b || "colorm-sns";
 }
 
@@ -770,7 +799,7 @@ async function renderPhoto(i){
   const img = clone.querySelector(".p-main");
   img.src = p.url; img.hidden = false;
   placeImg(img, p);
-  fillText(clone, textFor(i));
+  fillText(clone, i);
   document.body.appendChild(clone);
   try{
     if(img.decode) await img.decode().catch(() => {});
