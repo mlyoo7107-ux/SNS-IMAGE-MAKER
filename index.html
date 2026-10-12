@@ -62,6 +62,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .preview-wrap.blurring{cursor:crosshair}
 .bbox{position:absolute;border:2px dashed #fff;box-shadow:0 0 0 1px rgba(0,0,0,.55);border-radius:4px;pointer-events:auto;cursor:move;background:rgba(255,45,134,.15);touch-action:none}
 .bbox.on{border:2px solid var(--a)}
+.blur-layer.round .bbox{border-radius:50%}
 .bbox .h{position:absolute;right:-11px;bottom:-11px;width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--a);cursor:nwse-resize}
 .bbox .bx{position:absolute;right:-11px;top:-11px;width:22px;height:22px;border-radius:50%;background:#c0392b;color:#fff;border:0;font-size:13px;line-height:22px;text-align:center;padding:0;cursor:pointer}
 .blur-done{padding:9px 22px;border:0;border-radius:20px;background:var(--a);color:#fff;font-size:13.5px;font-weight:bold;font-family:inherit;cursor:pointer;box-shadow:0 3px 10px rgba(255,45,134,.35)}
@@ -118,8 +119,11 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
       <label>얼굴 가리기 <span id="blurFor"></span></label>
       <button type="button" class="blur-btn" id="blurBtn">🙈 얼굴 가리기</button>
       <div id="blurOpts" hidden>
-        <p class="hint" style="margin:6px 0 8px">미리보기에서 <b>가릴 곳을 누르거나 드래그</b>하세요. 네모를 끌면 옮겨지고, 오른쪽 아래 점으로 크기를 바꿔요</p>
+        <p class="hint" style="margin:6px 0 8px">미리보기에서 <b>가릴 곳을 누르거나 드래그</b>하세요. 가리개를 끌면 옮겨지고, 오른쪽 아래 점으로 크기를 바꿔요</p>
         <div class="seg" id="f_blurType"><button type="button" data-v="blur" class="on">블러</button><button type="button" data-v="mosaic">모자이크</button></div>
+        <div class="seg" id="f_blurShape" style="margin-top:6px"><button type="button" data-v="ellipse" class="on">⚪ 원형</button><button type="button" data-v="rect">⬜ 네모</button></div>
+        <label style="margin-top:10px;font-weight:normal;font-size:12px;color:var(--m)">강도 <b id="blurLevelOut" style="color:var(--a)">5</b></label>
+        <input type="range" id="f_blurLevel" min="1" max="10" value="5" style="width:100%;padding:0;border:0">
         <div class="order"><button type="button" id="blurClear">이 사진 가리기 모두 지우기</button></div>
       </div>
     </div>
@@ -545,6 +549,8 @@ window.addEventListener("resize", applyRatio);
    저장 이미지 도구(html2canvas)가 CSS 블러를 못 그려서, 가린 사진을 새로 만들어 그 사진을 씀 */
 let blurMode = false;
 let blurType = "blur";
+let blurShape = "ellipse";
+let blurLevel = 5; // 1(약하게) ~ 10(세게)
 let selBox = -1;
 const MAX_SIDE = 3000; // 가린 사진의 최대 크기 — 폰 메모리 보호
 
@@ -565,6 +571,7 @@ function setBlurMode(on){
 function renderBoxes(){
   const layer = $("blurLayer");
   if(!blurMode || !P()){ layer.innerHTML = ""; return; }
+  layer.classList.toggle("round", blurShape === "ellipse");
   const ir = $("o_img").getBoundingClientRect(), wr = $("previewWrap").getBoundingClientRect();
   layer.innerHTML = P().blurs.map((b, i) => `<div class="bbox${i === selBox ? " on" : ""}" data-b="${i}" style="left:${ir.left - wr.left + b.x * ir.width}px;top:${ir.top - wr.top + b.y * ir.height}px;width:${b.w * ir.width}px;height:${b.h * ir.height}px"><button type="button" class="bx" aria-label="가리기 지우기">×</button><span class="h"></span></div>`).join("");
 }
@@ -597,24 +604,29 @@ async function bake(p){
 const CAN_FILTER = (() => { try{ const g = document.createElement("canvas").getContext("2d"); g.filter = "blur(2px)"; return g.filter === "blur(2px)"; }catch(e){ return false; } })();
 function coverArea(g, c, src, x, y, w, h, W, H){
   const m = Math.min(w, h);
+  const lv = blurLevel; // 1 ~ 10
   g.save();
-  g.beginPath(); g.rect(x, y, w, h); g.clip();
+  g.beginPath();
+  if(blurShape === "ellipse") g.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+  else g.rect(x, y, w, h);
+  g.clip();
   if(blurType === "mosaic"){
-    /* 모자이크: 작게 줄인 뒤 부드럽게 하지 않고 키움 → 네모 칸 */
-    const block = Math.max(8, Math.round(m / 6)); // 6칸 정도 — 더 잘게 하면 눈·입이 알아보여서
+    /* 모자이크: 작게 줄인 뒤 부드럽게 하지 않고 키움 → 네모 칸. 강도 1이면 24칸(잘게), 10이면 6칸(굵게) */
+    const block = Math.max(3, Math.round(m / (26 - lv * 2)));
     const t = document.createElement("canvas");
     t.width = Math.max(1, Math.ceil(w / block)); t.height = Math.max(1, Math.ceil(h / block));
     t.getContext("2d").drawImage(src, x / W * src.naturalWidth, y / H * src.naturalHeight, w / W * src.naturalWidth, h / H * src.naturalHeight, 0, 0, t.width, t.height);
     g.imageSmoothingEnabled = false;
     g.drawImage(t, x, y, t.width * block, t.height * block);
   }else if(CAN_FILTER){
-    g.filter = `blur(${Math.max(8, Math.round(m / 7))}px)`;
+    /* 블러 세기: 강도 1이면 가린 곳 크기의 약 3%, 5면 7.5%, 10이면 13.5% */
+    g.filter = `blur(${Math.max(2, Math.round(m * (0.015 + 0.012 * lv)))}px)`;
     g.drawImage(src, 0, 0, W, H);
   }else{
     /* 블러 대체: 아주 작게 줄였다가 부드럽게 두 번 키움 */
     const pad = Math.round(m / 4);
     const sx = Math.max(0, x - pad), sy = Math.max(0, y - pad), sw = Math.min(W - sx, w + pad * 2), sh = Math.min(H - sy, h + pad * 2);
-    const cell = Math.max(4, m / 4); // 가린 곳에 4칸 정도만 남기고 뭉갬 → 눈·코·입이 안 보이게
+    const cell = Math.max(2, m / (24 - lv * 2)); // 강도 1이면 22칸(살짝), 10이면 4칸(아주 뭉개짐)
     const t1 = document.createElement("canvas"); t1.width = Math.max(1, Math.round(sw / cell)); t1.height = Math.max(1, Math.round(sh / cell));
     const t2 = document.createElement("canvas"); t2.width = t1.width * 4; t2.height = t1.height * 4;
     t1.getContext("2d").drawImage(src, sx / W * src.naturalWidth, sy / H * src.naturalHeight, sw / W * src.naturalWidth, sh / H * src.naturalHeight, 0, 0, t1.width, t1.height);
@@ -691,7 +703,17 @@ function coverArea(g, c, src, x, y, w, h, W, H){
 $("blurBtn").onclick = () => setBlurMode(!blurMode);
 $("blurDone").onclick = () => setBlurMode(false);
 $("blurClear").onclick = () => { if(!P() || !P().blurs.length) return; P().blurs = []; selBox = -1; clearPending(); rebuild(P()); renderBoxes(); };
-wireSeg("f_blurType", v => { blurType = v; photos.filter(p => p.blurs.length).forEach(rebuild); });
+const rebuildAll = () => photos.filter(p => p.blurs.length).forEach(rebuild);
+wireSeg("f_blurType", v => { blurType = v; rebuildAll(); });
+wireSeg("f_blurShape", v => { blurShape = v; renderBoxes(); rebuildAll(); });
+/* 강도: 끄는 동안 숫자만 바꾸고, 잠깐 멈추면 다시 그림 */
+let levelTimer = null;
+$("f_blurLevel").addEventListener("input", e => {
+  blurLevel = Number(e.target.value);
+  $("blurLevelOut").textContent = blurLevel;
+  clearTimeout(levelTimer);
+  levelTimer = setTimeout(rebuildAll, 150);
+});
 
 /* ---------- 저장 ---------- */
 const saveLabel = () => photos.length > 1 ? `⬇️ ${photos.length}장 모두 저장` : "⬇️ PNG로 저장";
