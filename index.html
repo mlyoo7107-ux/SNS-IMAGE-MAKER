@@ -63,6 +63,13 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .p-scrim{position:absolute;left:0;right:0;bottom:0;height:62%;background:linear-gradient(to top,rgba(0,0,0,.72) 0%,rgba(0,0,0,.38) 45%,rgba(0,0,0,0) 100%)}
 .p-text{position:absolute;left:calc(72px*var(--k,1));right:calc(72px*var(--k,1));bottom:calc(48px*var(--k,1))}
 .p-title{font-size:58px;font-weight:900;color:#fff;line-height:1.25;white-space:pre-wrap;text-shadow:0 4px 16px rgba(0,0,0,.4)}
+/* 글자 위치: 위 · 가운데 · 아래(기본). 어두운 덮개도 글자 쪽으로 따라감 */
+.pos-top .p-text{top:calc(56px*var(--k,1));bottom:auto}
+/* 저장 이미지(html2canvas)에서 덮개 아래 끝에 검은 줄이 생김 → 덮개를 사진 밖까지 늘려 그 줄이 잘려 나가게 하고, 아래 38%는 투명 */
+.pos-top .p-scrim{top:0;bottom:auto;height:calc(100% + 6px);background:linear-gradient(to top,rgba(0,0,0,0) 0%,rgba(0,0,0,0) 38%,rgba(0,0,0,.38) 72%,rgba(0,0,0,.72) 100%)}
+.pos-mid .p-text{top:0;bottom:0;display:flex;flex-direction:column;justify-content:center}
+.pos-mid .p-scrim{top:0;height:100%;background:rgba(0,0,0,.38)}
+.align-center .p-text{text-align:center}
 .p-sub{margin-top:calc(16px*var(--k,1));font-size:26px;font-weight:600;color:#fff;opacity:.92;line-height:1.4;white-space:pre-wrap;text-shadow:0 2px 8px rgba(0,0,0,.35)}
 .p-foot{flex:none;padding:calc(12px*var(--k,1)) calc(72px*var(--k,1));display:flex;align-items:center;justify-content:space-between;gap:24px;border-top:1px solid #eee;background:#fff}
 /* 로고 파일 위아래의 투명 여백만큼 겹치게 해서 흰 띠를 얇게 */
@@ -96,6 +103,8 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     <div class="field"><label>제목</label><textarea id="f_title" rows="2" placeholder="이미지에 넣을 제목을 입력하세요"></textarea><p class="hint">줄을 바꾸면 이미지에서도 줄이 바뀌어요</p></div>
     <div class="field"><label>작은 글씨 <span>(선택)</span></label><input id="f_sub" placeholder="예: 2026 가을 컬러 수업 · 3학년 2반"></div>
     <div class="field" id="textOnField" hidden><label>글자 넣을 사진</label><div class="seg" id="f_textOn"><button type="button" data-v="all" class="on">모든 사진</button><button type="button" data-v="first">첫 장만</button></div><p class="hint">'첫 장만'이면 나머지 사진엔 로고만 들어가요</p></div>
+    <div class="field"><label>글자 위치</label><div class="seg" id="f_pos"><button type="button" data-v="top">위</button><button type="button" data-v="mid">가운데</button><button type="button" data-v="bottom" class="on">아래</button></div></div>
+    <div class="field"><label>정렬</label><div class="seg" id="f_align"><button type="button" data-v="left" class="on">왼쪽</button><button type="button" data-v="center">가운데</button></div></div>
     <div class="field"><label>글자 크기</label><div class="seg" id="f_size"><button type="button" data-v="0.8">작게</button><button type="button" data-v="1" class="on">보통</button><button type="button" data-v="1.25">크게</button></div></div>
     <div class="field"><label>하단 오른쪽 문구 <span>(선택)</span></label><input id="f_foot" placeholder="예: 홈페이지 주소나 SNS 계정"><p class="hint">비워두면 COLOR.M 로고만 가운데에 들어가요</p></div>
     <button class="go" id="downloadBtn" disabled>⬇️ PNG로 저장</button>
@@ -378,6 +387,11 @@ function wireSeg(id, onPick){
 }
 wireSeg("f_size", v => { textScale = Number(v); applyRatio(); });
 wireSeg("f_textOn", v => { textOn = v; syncText(); });
+/* 포스터에 클래스로 적용 — 저장용 복제본도 그대로 따라감 */
+const root = $("posterRoot");
+root.classList.add("pos-bottom", "align-left");
+wireSeg("f_pos", v => { root.classList.remove("pos-top", "pos-mid", "pos-bottom"); root.classList.add("pos-" + v); });
+wireSeg("f_align", v => { root.classList.remove("align-left", "align-center"); root.classList.add("align-" + v); });
 document.querySelector(".panel").addEventListener("input", clearPending);
 document.querySelector(".panel").addEventListener("change", clearPending);
 window.addEventListener("resize", applyRatio);
