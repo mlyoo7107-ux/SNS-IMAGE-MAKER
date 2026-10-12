@@ -97,6 +97,11 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .p-title{font-size:58px;font-weight:900;color:#fff;line-height:1.25;white-space:pre-wrap;text-shadow:0 4px 16px rgba(0,0,0,.4)}
 /* 글자 위치: 위 · 가운데 · 아래(기본). 어두운 덮개도 글자 쪽으로 따라감 */
 .bg-white .p-photo{background:#fff}
+/* 글자 그늘 진하기 · 글자 색 */
+.shade-soft .p-scrim{opacity:.5}
+.shade-none .p-scrim{display:none!important}
+.tc-dark .p-title,.tc-dark .p-sub,.tc-pink .p-sub{color:#171512;text-shadow:none}
+.tc-pink .p-title{color:#ff2d86;text-shadow:none}
 .pos-top .p-text{top:calc(56px*var(--k,1));bottom:auto}
 /* 저장 이미지(html2canvas)에서 덮개 아래 끝에 검은 줄이 생김 → 덮개를 사진 밖까지 늘려 그 줄이 잘려 나가게 하고, 아래 38%는 투명 */
 .pos-top .p-scrim{top:0;bottom:auto;height:calc(100% + 6px);background:linear-gradient(to top,rgba(0,0,0,0) 0%,rgba(0,0,0,0) 38%,rgba(0,0,0,.38) 72%,rgba(0,0,0,.72) 100%)}
@@ -188,6 +193,13 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     <div class="field"><label>작은 글씨 <span id="subFor">(선택)</span></label><input id="f_sub" placeholder="예: 2026 가을 컬러 수업 · 3학년 2반"></div>
     <div class="field"><label>글자 위치</label><div class="seg" id="f_pos"><button type="button" data-v="top">위</button><button type="button" data-v="mid">가운데</button><button type="button" data-v="bottom" class="on">아래</button></div></div>
     <div class="field"><label>정렬</label><div class="seg" id="f_align"><button type="button" data-v="left" class="on">왼쪽</button><button type="button" data-v="center">가운데</button></div></div>
+    <div class="field">
+      <label>글자 색</label>
+      <div class="seg" id="f_textColor"><button type="button" data-v="white" class="on">흰색</button><button type="button" data-v="dark">검정</button><button type="button" data-v="pink" style="color:#ff2d86">분홍</button></div>
+      <label style="margin-top:10px">글자 뒤 그늘</label>
+      <div class="seg" id="f_shade"><button type="button" data-v="strong" class="on">진하게</button><button type="button" data-v="soft">연하게</button><button type="button" data-v="none">없음</button></div>
+      <p class="hint">밝은 사진·후기 캡처엔 '검정 + 그늘 없음'이 잘 어울려요</p>
+    </div>
     <div class="field"><label>글자 크기</label><div class="seg" id="f_size"><button type="button" data-v="0.8">작게</button><button type="button" data-v="1" class="on">보통</button><button type="button" data-v="1.25">크게</button></div></div>
     <div class="field"><label>하단 오른쪽 문구 <span>(선택)</span></label><input id="f_foot" placeholder="예: 홈페이지 주소나 SNS 계정"><p class="hint">비워두면 COLOR.M 로고만 가운데에 들어가요</p></div>
     <button class="go" id="downloadBtn" disabled>⬇️ PNG로 저장</button>
@@ -291,9 +303,39 @@ function fitPhoto(p){
   p.baseH = p.naturalH * cover;
   p.zoom = 1; p.panX = 0;
   p.panY = Math.max(0, p.baseH - box.h) / 2 * TOP_BIAS;
-  if(fitMode === "contain"){ p.zoom = minZoom(p) * CONTAIN_FIT; p.panY = 0; }
+  p.manual = false;
+  if(fitMode === "contain"){
+    /* 전체 넣기: 글자가 차지하는 칸을 비워두고 남은 곳에 사진을 넣음 → 글자와 사진이 안 겹침 */
+    const reserve = textReserve(photos.indexOf(p));
+    const fit = Math.min(1, box.w / p.baseW, (box.h - reserve) / p.baseH);
+    p.zoom = fit * CONTAIN_FIT;
+    p.panY = $("posterRoot").classList.contains("pos-top") ? reserve / 2 : -reserve / 2;
+  }
 }
 /* 확대를 이만큼까지 줄이면 사진 전체가 칸 안에 들어옴 */
+/* i번 사진의 글자가 차지하는 높이(포스터 기준 px). 가운데 배치거나 글자가 없으면 0 */
+function textReserve(i){
+  const root = $("posterRoot");
+  if(root.classList.contains("pos-mid")) return 0;
+  const t = textOf(Math.max(i, 0));
+  if(!t.title.trim() && !t.sub.trim()) return 0;
+  const el = root.querySelector(".p-text");
+  const k = parseFloat(root.style.getPropertyValue("--k")) || 1;
+  /* 지금 미리보기에 같은 글자가 떠 있으면 실제 높이로 재고, 아니면 줄 수로 어림잡음 (+ 위아래 여백) */
+  let h;
+  if(root.querySelector(".p-title").textContent === t.title && el.offsetHeight) h = el.offsetHeight;
+  else {
+    const tp = parseFloat($("o_title").style.fontSize) || 58, sp = parseFloat($("o_sub").style.fontSize) || 26;
+    h = (t.title.trim() ? t.title.split("\n").length * tp * 1.25 : 0) + (t.sub.trim() ? sp * 1.4 + 16 * k : 0);
+  }
+  return h + 48 * k + 24;
+}
+/* 전체 넣기에서 손대지 않은 사진은 글자가 바뀌면 다시 맞춤 */
+function autoRefit(){
+  if(fitMode !== "contain") return;
+  photos.forEach(p => { if(!p.manual) fitPhoto(p); });
+  if(P()){ $("f_zoom").min = Math.floor(zoomFloor(P()) * 100); $("f_zoom").value = Math.round(P().zoom * 100); applyImgTransform(); }
+}
 function minZoom(p){ const box = photoBox(); return Math.min(1, box.w / p.baseW, box.h / p.baseH); }
 /* 그보다 더 줄여서 사방에 여백을 둘 수도 있음 (전체가 딱 들어가는 크기의 절반까지) */
 function zoomFloor(p){ return minZoom(p) * 0.5; }
@@ -374,6 +416,7 @@ function onTextInput(){
   target.title = $("f_title").value;
   target.sub = $("f_sub").value;
   syncText();
+  autoRefit();
 }
 
 /* ---------- 화면 갱신 ---------- */
@@ -608,6 +651,7 @@ document.addEventListener("paste", e => {
     const c = center();
     P().panX = startPan.x + (c.x - start.x) / previewScale;
     P().panY = startPan.y + (c.y - start.y) / previewScale;
+    P().manual = true; // 손으로 옮긴 사진은 자동으로 다시 맞추지 않음
     applyImgTransform();
   });
   function end(e){
@@ -622,7 +666,7 @@ document.addEventListener("paste", e => {
 ["f_title","f_sub"].forEach(id => $(id).addEventListener("input", onTextInput));
 $("f_foot").addEventListener("input", syncText);
 $("f_ratio").addEventListener("change", () => { ratioManuallySet = true; applyRatio(); photos.forEach(fitPhoto); show(cur); });
-$("f_zoom").addEventListener("input", e => { if(!P()) return; P().zoom = Number(e.target.value)/100; applyImgTransform(); });
+$("f_zoom").addEventListener("input", e => { if(!P()) return; P().zoom = Number(e.target.value)/100; P().manual = true; applyImgTransform(); });
 function wireSeg(id, onPick){
   $(id).addEventListener("click", e => {
     const b = e.target.closest("button"); if(!b) return;
@@ -631,26 +675,29 @@ function wireSeg(id, onPick){
     clearPending();
   });
 }
-wireSeg("f_size", v => { textScale = Number(v); applyRatio(); });
+wireSeg("f_size", v => { textScale = Number(v); applyRatio(); autoRefit(); });
 wireSeg("f_textOn", v => {
   /* 장마다 다르게로 바꾸면 각 사진이 지금 글자로 시작 — 바꿀 사진만 고치면 됨 */
   if(v === "each" && textOn !== "each") photos.forEach(p => { if(p.title === undefined){ p.title = shared.title; p.sub = shared.sub; } });
   textOn = v;
   loadTextInputs();
   syncText();
+  autoRefit();
 });
 /* 포스터에 클래스로 적용 — 저장용 복제본도 그대로 따라감 */
 const root = $("posterRoot");
 root.classList.add("pos-bottom", "align-left", "bg-white");
+wireSeg("f_textColor", v => { root.classList.remove("tc-dark", "tc-pink"); if(v !== "white") root.classList.add("tc-" + v); });
+wireSeg("f_shade", v => { root.classList.remove("shade-soft", "shade-none"); if(v !== "strong") root.classList.add("shade-" + v); });
 wireSeg("f_fit", v => { fitMode = v; photos.forEach(fitPhoto); show(cur); });
 wireSeg("f_bgMode", v => { bgMode = v; root.classList.toggle("bg-white", v === "white"); applyImgTransform(); });
 /* 용도 버튼 = 사진 맞춤·배경을 한 번에 고르는 단축키 (그 뒤에 각각 따로 바꿔도 됨) */
 const pickSeg = (id, v) => document.querySelector(`#${id} [data-v="${v}"]`).click();
 wireSeg("f_preset", v => {
-  if(v === "review"){ pickSeg("f_fit", "contain"); pickSeg("f_bgMode", "white"); }
-  else { pickSeg("f_fit", "cover"); }
+  if(v === "review"){ pickSeg("f_fit", "contain"); pickSeg("f_bgMode", "white"); pickSeg("f_textColor", "dark"); pickSeg("f_shade", "none"); }
+  else { pickSeg("f_fit", "cover"); pickSeg("f_textColor", "white"); pickSeg("f_shade", "strong"); }
 });
-wireSeg("f_pos", v => { root.classList.remove("pos-top", "pos-mid", "pos-bottom"); root.classList.add("pos-" + v); });
+wireSeg("f_pos", v => { root.classList.remove("pos-top", "pos-mid", "pos-bottom"); root.classList.add("pos-" + v); autoRefit(); });
 wireSeg("f_align", v => { root.classList.remove("align-left", "align-center"); root.classList.add("align-" + v); });
 document.querySelector(".panel").addEventListener("input", clearPending);
 document.querySelector(".panel").addEventListener("change", clearPending);
