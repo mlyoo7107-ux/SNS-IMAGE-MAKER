@@ -115,6 +115,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .p-foot .r{font-size:calc(20px*var(--k,1));color:var(--m);font-weight:600;text-align:right}
 .p-foot.solo{justify-content:center}
 
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:300;background:rgba(23,21,18,.9);color:#fff;font-size:13.5px;padding:12px 18px;border-radius:22px;max-width:calc(100% - 32px);text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 /* 사진 자르기 화면 */
 .crop-ov{position:fixed;inset:0;z-index:200;background:rgba(20,20,24,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px}
 .crop-top{color:#fff;font-size:13.5px;text-align:center;line-height:1.5}
@@ -152,7 +153,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     <div class="field">
       <label>용도</label>
       <div class="seg" id="f_preset"><button type="button" data-v="photo" class="on">📷 일반 사진</button><button type="button" data-v="review">📝 후기 캡처</button></div>
-      <p class="hint">'후기 캡처'는 사진을 자르지 않고 전체를 넣고, 남는 곳은 흰색으로 채워요</p>
+      <p class="hint">'후기 캡처'는 사진을 자르지 않고 전체를 넣고, 남는 곳은 흰색으로 채워요. REVIEW 문구도 자동으로 들어가요 (고칠 수 있어요)</p>
     </div>
     <div class="field">
       <button type="button" class="pick" id="pickBtn">📷 사진 선택하기 (여러 장 가능)</button>
@@ -692,11 +693,20 @@ wireSeg("f_textColor", v => { root.classList.remove("tc-dark", "tc-pink"); if(v 
 wireSeg("f_shade", v => { root.classList.remove("shade-soft", "shade-none"); if(v !== "strong") root.classList.add("shade-" + v); });
 wireSeg("f_fit", v => { fitMode = v; photos.forEach(fitPhoto); show(cur); });
 wireSeg("f_bgMode", v => { bgMode = v; root.classList.toggle("bg-white", v === "white"); applyImgTransform(); });
-/* 용도 버튼 = 사진 맞춤·배경을 한 번에 고르는 단축키 (그 뒤에 각각 따로 바꿔도 됨) */
+const REVIEW_TEXT = {title:"REVIEW", sub:"고객님이 남겨주신 소중한 후기"};
+function setTextInputs(title, sub){ $("f_title").value = title; $("f_sub").value = sub; onTextInput(); }
+/* 용도 버튼 = 사진 맞춤·배경·글자 색을 한 번에 고르는 단축키 (그 뒤에 각각 따로 바꿔도 됨) */
 const pickSeg = (id, v) => document.querySelector(`#${id} [data-v="${v}"]`).click();
 wireSeg("f_preset", v => {
-  if(v === "review"){ pickSeg("f_fit", "contain"); pickSeg("f_bgMode", "white"); pickSeg("f_textColor", "dark"); pickSeg("f_shade", "none"); }
-  else { pickSeg("f_fit", "cover"); pickSeg("f_textColor", "white"); pickSeg("f_shade", "strong"); }
+  if(v === "review"){
+    pickSeg("f_fit", "contain"); pickSeg("f_bgMode", "white"); pickSeg("f_textColor", "pink"); pickSeg("f_shade", "none");
+    /* 제목이 비어 있으면 후기용 기본 문구를 넣어줌 (고쳐도 됨) */
+    if(!$("f_title").value.trim() && !$("f_sub").value.trim()) setTextInputs(REVIEW_TEXT.title, REVIEW_TEXT.sub);
+  }else{
+    pickSeg("f_fit", "cover"); pickSeg("f_textColor", "white"); pickSeg("f_shade", "strong");
+    /* 기본 문구를 안 고쳤으면 일반 사진으로 돌아갈 때 지움 */
+    if($("f_title").value === REVIEW_TEXT.title && $("f_sub").value === REVIEW_TEXT.sub) setTextInputs("", "");
+  }
 });
 wireSeg("f_pos", v => { root.classList.remove("pos-top", "pos-mid", "pos-bottom"); root.classList.add("pos-" + v); autoRefit(); });
 wireSeg("f_align", v => { root.classList.remove("align-left", "align-center"); root.classList.add("align-" + v); });
@@ -1012,6 +1022,11 @@ $("cropApply").onclick = async () => {
 const saveLabel = () => photos.length > 1 ? `⬇️ ${photos.length}장 모두 저장` : "⬇️ PNG로 저장";
 /* 휴대폰(터치 화면)이면 공유 시트로 저장 — 아이폰은 일반 다운로드로는 사진 앱에 저장이 안 됨 */
 const IS_TOUCH = matchMedia("(pointer:coarse)").matches;
+/* 안드로이드는 바로 다운로드하면 갤러리 "Download" 앨범에 들어감 → 공유 창 대신 바로 저장.
+   아이폰은 다운로드하면 '파일' 앱으로 가서, 사진 앱에 넣으려면 공유 창의 '이미지 저장'을 써야 함 */
+const IS_ANDROID = /Android/i.test(navigator.userAgent);
+/* 카카오톡·인스타 등 앱 안 브라우저는 다운로드가 막히는 경우가 많아서 길게 눌러 저장 */
+const IN_APP = /KAKAOTALK|Instagram|FBAN|FBAV|Line\/|NAVER\(inapp|DaumApps|everytimeApp|BAND\//i.test(navigator.userAgent);
 /* 이미지 만드는 시간이 길면 브라우저가 공유를 막음 → 만든 파일을 들고 있다가 한 번 더 누르면 공유 */
 let pendingFiles = null;
 function clearPending(){
@@ -1085,11 +1100,14 @@ async function save(indexes){
       files.push(await renderPhoto(i));
     }
     btn.textContent = saveLabel();
-    if(IS_TOUCH){
+    if(IN_APP){
+      showSaveOverlay(await Promise.all(files.map(fileToDataURL)));
+    }else if(IS_TOUCH && !IS_ANDROID){
+      /* 아이폰: 공유 창 → '이미지 저장' */
       if(navigator.canShare && navigator.canShare({files})) await shareFiles(files);
       else showSaveOverlay(await Promise.all(files.map(fileToDataURL)));
     }else{
-      /* PC: 한꺼번에 받으면 브라우저가 일부를 막을 수 있어 조금씩 간격을 둠 */
+      /* PC·안드로이드: 바로 다운로드. 한꺼번에 받으면 브라우저가 일부를 막을 수 있어 조금씩 간격을 둠 */
       for(const f of files){
         const url = URL.createObjectURL(f);
         const link = document.createElement("a");
@@ -1099,6 +1117,7 @@ async function save(indexes){
         setTimeout(() => URL.revokeObjectURL(url), 10000);
         if(files.length > 1) await new Promise(r => setTimeout(r, 350));
       }
+      if(IS_ANDROID) toast(`${files.length > 1 ? files.length + "장이 " : ""}저장됐어요 · 갤러리의 'Download' 앨범에서 볼 수 있어요`);
     }
   }catch(e){
     alert("이미지 생성에 실패했어요: " + e.message);
@@ -1106,6 +1125,14 @@ async function save(indexes){
     btn.disabled = !photos.length; $("saveOneBtn").disabled = false;
     if(!pendingFiles) btn.textContent = saveLabel();
   }
+}
+/* 화면 아래에 잠깐 뜨는 안내 */
+function toast(msg){
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
 }
 function fileToDataURL(f){
   return new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(f); });
