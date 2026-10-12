@@ -118,7 +118,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
       </div>
     </div>
     <div class="field"><label>비율</label><select id="f_ratio"></select><p class="hint">사진에 맞춰 자동으로 추천해요. 여러 장은 모두 같은 비율로 만들어져요</p></div>
-    <div class="field"><label>확대 <span id="zoomFor"></span></label><input type="range" id="f_zoom" min="100" max="250" value="100" style="width:100%;padding:0;border:0"><p class="hint">미리보기를 드래그하면 위치도 옮길 수 있어요 (폰은 두 손가락으로 확대)</p></div>
+    <div class="field"><label>확대 <span id="zoomFor"></span></label><input type="range" id="f_zoom" min="100" max="250" value="100" style="width:100%;padding:0;border:0"><p class="hint">미리보기를 드래그하면 위치를 옮길 수 있어요. 많이 옮기고 싶으면 확대를 키우고, 사진 전체를 넣고 싶으면 왼쪽 끝까지 줄이세요 (빈 곳은 흐린 배경으로 채워져요)</p></div>
     <div class="field"><label>제목</label><textarea id="f_title" rows="2" placeholder="이미지에 넣을 제목을 입력하세요"></textarea><p class="hint">줄을 바꾸면 이미지에서도 줄이 바뀌어요</p></div>
     <div class="field"><label>작은 글씨 <span>(선택)</span></label><input id="f_sub" placeholder="예: 2026 가을 컬러 수업 · 3학년 2반"></div>
     <div class="field" id="textOnField" hidden><label>글자 넣을 사진</label><div class="seg" id="f_textOn"><button type="button" data-v="all" class="on">모든 사진</button><button type="button" data-v="first">첫 장만</button></div><p class="hint">'첫 장만'이면 나머지 사진엔 로고만 들어가요</p></div>
@@ -134,7 +134,8 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     <div class="preview-wrap empty" id="previewWrap"><div class="drag-hint" id="dragHint">🖐️ 드래그해서 사진 위치 조정</div><div class="blur-layer" id="blurLayer" hidden></div>
       <div id="posterRoot">
         <div class="p-photo">
-          <img id="o_img" alt="" hidden>
+          <img class="p-bg" alt="" hidden>
+          <img id="o_img" class="p-main" alt="" hidden>
           <div class="p-empty" id="o_empty"><b>📷</b>사진을 올려주세요</div>
           <div class="p-scrim" id="o_scrim"></div>
           <div class="p-text"><div class="p-title" id="o_title"></div><div class="p-sub" id="o_sub"></div></div>
@@ -199,28 +200,59 @@ function applyRatio(){
 }
 
 const TOP_BIAS = 0.6; // 위아래가 잘릴 때 0 = 가운데, 1 = 사진 맨 위에 맞춤
+/* 사진이 보이는 칸 = 전체에서 하단 흰 띠를 뺀 부분 */
+function photoBox(){ const r = ratio(); return {w:r.w, h:r.h - $("o_foot").offsetHeight}; }
 function fitPhoto(p){
-  const r = ratio();
-  const sx = r.w / p.naturalW, sy = r.h / p.naturalH;
+  const box = photoBox();
+  const sx = box.w / p.naturalW, sy = box.h / p.naturalH;
   /* 사진과 틀 모양이 비슷하면 15% 더 키워 옮길 여유를 줌. 이미 많이 잘리면 더 키우지 않음 */
   const extra = Math.max(sx, sy) / Math.min(sx, sy) >= 1.15 ? 1 : 1.15;
   const cover = Math.max(sx, sy) * extra;
   p.baseW = p.naturalW * cover;
   p.baseH = p.naturalH * cover;
   p.zoom = 1; p.panX = 0;
-  p.panY = Math.max(0, p.baseH - r.h) / 2 * TOP_BIAS;
+  p.panY = Math.max(0, p.baseH - box.h) / 2 * TOP_BIAS;
 }
+/* 확대를 이만큼까지 줄이면 사진 전체가 칸 안에 들어옴 */
+function minZoom(p){ const box = photoBox(); return Math.min(1, box.w / p.baseW, box.h / p.baseH); }
 
-/* 사진 위치를 틀 안으로 제한하고 img에 적용 — 미리보기와 저장용 복제본 모두 이걸로 그림 */
+/* 사진 위치를 제한하고 img에 적용 — 미리보기와 저장용 복제본 모두 이걸로 그림.
+   사진이 칸보다 크면 빈 곳이 안 생기게, 작으면 칸 안에서 자유롭게 */
 function placeImg(img, p){
-  const r = ratio();
+  const box = photoBox();
   const effW = p.baseW * p.zoom, effH = p.baseH * p.zoom;
-  const maxX = Math.max(0, (effW - r.w) / 2), maxY = Math.max(0, (effH - r.h) / 2);
+  const maxX = Math.abs(effW - box.w) / 2, maxY = Math.abs(effH - box.h) / 2;
   p.panX = Math.max(-maxX, Math.min(maxX, p.panX));
   p.panY = Math.max(-maxY, Math.min(maxY, p.panY));
   img.style.width = effW + "px";
   img.style.height = effH + "px";
   img.style.transform = `translate(-50%,-50%) translate(${p.panX}px, ${p.panY}px)`;
+  /* 빈 곳이 생기면 같은 사진을 흐리게 크게 깔아서 채움 */
+  const bg = img.parentElement.querySelector(".p-bg");
+  const gap = effW < box.w - 1 || effH < box.h - 1;
+  bg.hidden = !gap;
+  if(gap){
+    const s = Math.max(box.w / p.naturalW, box.h / p.naturalH) * 1.1;
+    bg.src = p.bgUrl;
+    bg.style.width = p.naturalW * s + "px";
+    bg.style.height = p.naturalH * s + "px";
+    bg.style.transform = "translate(-50%,-50%)";
+  }
+}
+/* 흐린 배경용 작은 사진 — 아주 작게 줄였다가 부드럽게 키우면 블러처럼 됨 */
+function makeBg(el){
+  const s = 40 / Math.max(el.naturalWidth, el.naturalHeight);
+  const t = document.createElement("canvas");
+  t.width = Math.max(1, Math.round(el.naturalWidth * s)); t.height = Math.max(1, Math.round(el.naturalHeight * s));
+  t.getContext("2d").drawImage(el, 0, 0, t.width, t.height);
+  const c = document.createElement("canvas");
+  c.width = t.width * 10; c.height = t.height * 10;
+  const g = c.getContext("2d");
+  g.imageSmoothingQuality = "high";
+  g.drawImage(t, 0, 0, c.width, c.height);
+  g.fillStyle = "rgba(0,0,0,.12)"; // 살짝 어둡게 — 앞 사진이 더 또렷해 보이게
+  g.fillRect(0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.85);
 }
 function applyImgTransform(){ if(P()) placeImg($("o_img"), P()); renderBoxes(); }
 
@@ -271,9 +303,11 @@ function show(i){
   if(p){
     img.src = p.url; img.hidden = false;
     placeImg(img, p);
+    $("f_zoom").min = Math.floor(minZoom(p) * 100);
     $("f_zoom").value = Math.round(p.zoom * 100);
   }else{
     img.hidden = true; img.removeAttribute("src");
+    document.querySelector("#posterRoot .p-bg").hidden = true;
   }
   $("o_empty").hidden = !!p;
   $("previewWrap").classList.toggle("empty", !p);
@@ -288,7 +322,7 @@ function readImage(file){
     const url = URL.createObjectURL(file);
     const probe = new Image();
     /* url = 화면·저장에 쓰는 사진(가리기가 있으면 가린 사진), srcUrl·el = 원본 */
-    probe.onload = () => resolve({url, srcUrl:url, el:probe, blurs:[], ready:Promise.resolve(), name:file.name.replace(/\.[^.]+$/, ""), naturalW:probe.naturalWidth, naturalH:probe.naturalHeight});
+    probe.onload = () => resolve({url, srcUrl:url, el:probe, bgUrl:makeBg(probe), blurs:[], ready:Promise.resolve(), name:file.name.replace(/\.[^.]+$/, ""), naturalW:probe.naturalWidth, naturalH:probe.naturalHeight});
     probe.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
     probe.src = url;
   });
@@ -385,7 +419,7 @@ document.addEventListener("paste", e => {
     if(!pts.has(e.pointerId) || !P()) return;
     pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
     if(pts.size >= 2 && startDist > 0){
-      const z = Math.max(1, Math.min(2.5, startZoom * dist() / startDist));
+      const z = Math.max(minZoom(P()), Math.min(2.5, startZoom * dist() / startDist));
       P().zoom = z;
       $("f_zoom").value = Math.round(z * 100);
     }
@@ -627,7 +661,7 @@ async function renderPhoto(i){
   const r = ratio(), p = photos[i];
   const clone = $("posterRoot").cloneNode(true);
   Object.assign(clone.style, {transform:"none", position:"fixed", top:"0", left:"-99999px", width:r.w+"px", height:r.h+"px"});
-  const img = clone.querySelector(".p-photo img");
+  const img = clone.querySelector(".p-main");
   img.src = p.url; img.hidden = false;
   placeImg(img, p);
   fillText(clone, textFor(i));
