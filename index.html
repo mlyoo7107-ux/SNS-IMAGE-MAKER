@@ -13,6 +13,9 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .topbar{background:white;border-bottom:1px solid var(--l);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .topbar img{height:26px;width:auto;display:block}
 .topbar h1{font-size:15px;margin:0}
+.topbar .right{display:flex;align-items:center;gap:10px}
+.reset-btn{padding:6px 12px;border:1px solid var(--l);border-radius:16px;background:white;font-size:12px;font-weight:bold;font-family:inherit;color:var(--m);cursor:pointer;white-space:nowrap}
+.reset-btn:hover{border-color:var(--a);color:var(--a)}
 .layout{max-width:1200px;margin:auto;padding:24px 20px 80px;display:grid;grid-template-columns:360px 1fr;gap:28px;align-items:start}
 .panel{background:white;border:1px solid var(--l);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:16px}
 .field label{display:block;font-size:12.5px;font-weight:bold;margin-bottom:6px;color:var(--t)}
@@ -105,7 +108,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
   .preview-outer{order:-1;position:sticky;top:0;z-index:10;background:var(--b);padding:12px 0 8px;margin:0 -20px;box-shadow:0 6px 10px -8px rgba(23,21,18,.25)}
 }
 </style></head><body>
-<div class="topbar"><img src="logo-colorm.png" alt="COLOR.M"><h1>SNS 이미지 만들기</h1></div>
+<div class="topbar"><img src="logo-colorm.png" alt="COLOR.M"><div class="right"><button type="button" class="reset-btn" id="resetBtn" hidden>↺ 새로 시작</button><h1>SNS 이미지 만들기</h1></div></div>
 <div class="layout">
   <div class="panel">
     <div class="field">
@@ -324,6 +327,7 @@ function renderStrip(){
   $("pickBtn").disabled = n >= MAX_PHOTOS;
   $("downloadBtn").disabled = !n;
   $("saveOneBtn").hidden = n < 2;
+  $("resetBtn").hidden = !n;
   $("blurField").hidden = !n;
   $("blurFor").textContent = n > 1 ? `(${cur + 1}번 사진)` : "";
   if(!n && blurMode) setBlurMode(false);
@@ -849,12 +853,24 @@ async function save(indexes){
 function fileToDataURL(f){
   return new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(f); });
 }
+/* 새로 시작 — 사진·글자·설정을 모두 지우고 처음 화면으로 (페이지를 다시 불러오는 게 가장 깔끔) */
+$("resetBtn").onclick = () => {
+  if(!confirm("만든 내용(사진·글자·가리기)이 모두 지워져요.\n새로 시작할까요?")) return;
+  photos.forEach(p => { if(p.url !== p.srcUrl) URL.revokeObjectURL(p.url); URL.revokeObjectURL(p.srcUrl); });
+  photos = [];
+  location.reload();
+};
 $("downloadBtn").onclick = () => {
   if(pendingFiles){ const f = pendingFiles; clearPending(); return shareFiles(f); }
   save(photos.map((_, i) => i));
 };
 $("saveOneBtn").onclick = () => { clearPending(); save([cur]); };
 
+/* 일부 브라우저는 새로고침해도 입력칸 내용을 되살려서, 시작할 때 비움 */
+["f_title","f_sub","f_foot"].forEach(id => { $(id).value = ""; });
+$("f_ratio").value = "4:5";
+$("f_zoom").value = 100;
+$("f_blurLevel").value = 5;
 syncText();
 applyRatio();
 renderStrip();
