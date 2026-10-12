@@ -122,6 +122,23 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .p-foot .r{font-size:calc(20px*var(--k,1));color:var(--m);font-weight:600;text-align:right}
 .p-foot.solo{justify-content:center}
 
+/* 피드 미리보기 */
+.feed-ov{position:fixed;inset:0;z-index:150;background:rgba(20,20,24,.92);display:flex;align-items:center;justify-content:center;padding:16px}
+.feed-card{background:#fff;border-radius:18px;width:min(420px,100%);max-height:100%;display:flex;flex-direction:column;overflow:hidden}
+.feed-head{padding:14px 16px;border-bottom:1px solid var(--l);display:flex;align-items:center;justify-content:space-between}
+.feed-head b{font-size:15px}
+.feed-head button{border:0;background:none;font-size:20px;cursor:pointer;color:var(--m);padding:0 4px}
+.feed-scroll{overflow-y:auto;padding:2px 0}
+.feed-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.feed-tile{position:relative;aspect-ratio:3/4;background:#eee;overflow:hidden}
+.feed-tile img{width:100%;height:100%;object-fit:cover;display:block}
+.feed-tile.new{outline:3px solid var(--a);outline-offset:-3px}
+.feed-tile .tag{position:absolute;left:5px;top:5px;background:var(--a);color:#fff;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:8px}
+.feed-tile .multi{position:absolute;right:6px;top:5px;color:#fff;font-size:14px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.feed-tile .x{position:absolute;right:4px;top:4px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:13px;line-height:22px;padding:0;cursor:pointer}
+.feed-tile.empty{display:flex;align-items:center;justify-content:center;color:#bbb;font-size:22px;background:#f5f5f7}
+.feed-foot{padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--l)}
+.feed-foot .hint{font-size:11px;color:var(--m);margin:0;text-align:center;line-height:1.5}
 .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:300;background:rgba(23,21,18,.9);color:#fff;font-size:13.5px;padding:12px 18px;border-radius:22px;max-width:calc(100% - 32px);text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 /* 사진 자르기 화면 */
 .crop-ov{position:fixed;inset:0;z-index:200;background:rgba(20,20,24,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px}
@@ -221,6 +238,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     <div class="field"><label>하단 오른쪽 문구 <span>(선택)</span></label><input id="f_foot" placeholder="예: 홈페이지 주소나 SNS 계정"><p class="hint">비워두면 COLOR.M 로고만 가운데에 들어가요</p></div>
     <button class="go" id="downloadBtn" disabled>⬇️ PNG로 저장</button>
     <button class="go sub" id="saveOneBtn" hidden>이 사진만 저장</button>
+    <button class="go sub" id="feedBtn" hidden>📱 피드 미리보기</button>
     <p class="hint" style="text-align:center;margin:0" id="dimHint"></p>
   </div>
   <div class="preview-outer">
@@ -238,6 +256,18 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     </div>
     <button type="button" class="blur-done" id="blurDone" hidden>✓ 가리기 완료</button>
     <div class="pv-nav" id="pvNav" hidden><button type="button" id="pvPrev" aria-label="이전 사진">◀</button><span id="pvCount"></span><button type="button" id="pvNext" aria-label="다음 사진">▶</button></div>
+  </div>
+</div>
+<div class="feed-ov" id="feedOv" hidden>
+  <div class="feed-card">
+    <div class="feed-head"><b>📱 피드 미리보기</b><button type="button" id="feedClose" aria-label="닫기">✕</button></div>
+    <div class="feed-scroll"><div class="feed-grid" id="feedGrid"></div></div>
+    <div class="feed-foot">
+      <button type="button" class="go sub" id="feedAdd" style="margin:0">＋ 기존 게시물 추가</button>
+      <input type="file" id="feedFile" accept="image/*" multiple hidden>
+      <button type="button" class="go" id="feedPosted">✓ 이 게시물 올렸어요 (피드에 기억)</button>
+      <p class="hint">기존 게시물은 최신 것부터 골라 주세요. 기억한 게시물은 이 기기에만 저장되고, ×로 지울 수 있어요</p>
+    </div>
   </div>
 </div>
 <div class="crop-ov" id="cropOv" hidden>
@@ -457,6 +487,7 @@ function renderStrip(){
   $("downloadBtn").disabled = !n;
   $("saveOneBtn").hidden = n < 2;
   $("resetBtn").hidden = !n;
+  $("feedBtn").hidden = !n;
   $("blurField").hidden = !n;
   $("cropField").hidden = !n;
   $("cropFor").textContent = n > 1 ? `(${cur + 1}번 사진)` : "";
@@ -1184,6 +1215,66 @@ $("downloadBtn").onclick = () => {
   save(photos.map((_, i) => i));
 };
 $("saveOneBtn").onclick = () => { clearPending(); save([cur]); };
+
+/* ---------- 피드 미리보기 ---------- */
+/* 인스타 프로필 격자(3칸, 3:4)에 지금 게시물의 첫 장을 맨 앞에 놓아봄.
+   '올렸어요'를 누르면 썸네일을 기억 → 다음 미리보기에서 그 뒤에 이어짐 (이 기기 브라우저에만 저장) */
+const FEED_KEY = "cmFeedThumbs", FEED_MAX = 30;
+let feedThumbs = [];
+try{ feedThumbs = JSON.parse(localStorage.getItem(FEED_KEY) || "[]"); }catch(e){ feedThumbs = []; }
+let feedNew = null; // 지금 게시물 첫 장 썸네일
+function saveFeed(){
+  try{ localStorage.setItem(FEED_KEY, JSON.stringify(feedThumbs.slice(0, FEED_MAX))); return true; }
+  catch(e){ toast("저장 공간이 부족해서 기억하지 못했어요. 오래된 게시물을 몇 개 지워 주세요"); return false; }
+}
+/* 이미지(파일·캔버스 등)를 3:4로 가운데 잘라 작은 썸네일로 */
+async function makeThumb(src){
+  const bm = await createImageBitmap(src);
+  const W = 300, H = 400, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const s = Math.max(W / bm.width, H / bm.height);
+  c.getContext("2d").drawImage(bm, (W - bm.width * s) / 2, (H - bm.height * s) / 2, bm.width * s, bm.height * s);
+  return c.toDataURL("image/jpeg", 0.8);
+}
+function renderFeed(){
+  const tiles = [];
+  if(feedNew) tiles.push(`<div class="feed-tile new"><img src="${feedNew}" alt=""><span class="tag">NEW</span>${photos.length > 1 ? '<span class="multi">❐</span>' : ""}</div>`);
+  feedThumbs.forEach((t, i) => tiles.push(`<div class="feed-tile"><img src="${t}" alt=""><button type="button" class="x" data-fx="${i}" aria-label="지우기">×</button></div>`));
+  while(tiles.length < 9 || tiles.length % 3) tiles.push('<div class="feed-tile empty">＋</div>');
+  $("feedGrid").innerHTML = tiles.join("");
+}
+$("feedBtn").onclick = async () => {
+  if(!photos.length) return;
+  const btn = $("feedBtn");
+  btn.disabled = true; btn.textContent = "만드는 중...";
+  try{
+    await Promise.all([posterFontsReady(), ...photos.map(p => p.ready)]);
+    feedNew = await makeThumb(await renderPhoto(0));
+    renderFeed();
+    $("feedOv").hidden = false;
+    document.body.style.overflow = "hidden";
+  }catch(e){ alert("미리보기를 만들지 못했어요: " + e.message); }
+  finally{ btn.disabled = false; btn.textContent = "📱 피드 미리보기"; }
+};
+const closeFeed = () => { $("feedOv").hidden = true; document.body.style.overflow = ""; };
+$("feedClose").onclick = closeFeed;
+$("feedOv").addEventListener("click", e => { if(e.target === $("feedOv")) closeFeed(); });
+$("feedGrid").addEventListener("click", e => {
+  const x = e.target.closest("[data-fx]");
+  if(x){ feedThumbs.splice(Number(x.dataset.fx), 1); saveFeed(); renderFeed(); return; }
+  if(e.target.closest(".feed-tile.empty")) $("feedFile").click();
+});
+$("feedAdd").onclick = () => $("feedFile").click();
+$("feedFile").onchange = async e => {
+  const files = [...e.target.files].filter(f => f.type.startsWith("image/"));
+  e.target.value = "";
+  for(const f of files){ try{ feedThumbs.push(await makeThumb(f)); }catch(err){} }
+  saveFeed(); renderFeed();
+};
+$("feedPosted").onclick = () => {
+  if(!feedNew) return;
+  feedThumbs.unshift(feedNew);
+  if(saveFeed()){ feedNew = null; renderFeed(); toast("피드에 기억했어요 · 다음 게시물은 이 앞에 놓여요"); }
+};
 
 /* 일부 브라우저는 새로고침해도 입력칸 내용을 되살려서, 시작할 때 비움 */
 ["f_title","f_sub","f_foot"].forEach(id => { $(id).value = ""; });
