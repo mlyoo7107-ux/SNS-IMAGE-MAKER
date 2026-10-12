@@ -1,0 +1,367 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SNS 이미지 만들기 — COLOR.M</title>
+<meta name="description" content="내 사진에 제목을 넣고 COLOR.M 로고가 들어간 SNS 업로드용 이미지를 만들어요.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root{--a:#ff2d86;--ab:#ffb3d1;--b:#f5f6fa;--l:#e2e5ee;--t:#171512;--m:#7a7268}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;color:var(--t);word-break:keep-all}
+.topbar{background:white;border-bottom:1px solid var(--l);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.topbar img{height:26px;width:auto;display:block}
+.topbar h1{font-size:15px;margin:0}
+.layout{max-width:1200px;margin:auto;padding:24px 20px 80px;display:grid;grid-template-columns:360px 1fr;gap:28px;align-items:start}
+.panel{background:white;border:1px solid var(--l);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.field label{display:block;font-size:12.5px;font-weight:bold;margin-bottom:6px;color:var(--t)}
+.field label span{font-weight:normal;color:var(--m)}
+.field input,.field select,.field textarea{width:100%;padding:9px 10px;border:1px solid var(--l);border-radius:8px;font-size:13px;font-family:inherit;background:white}
+.field textarea{resize:vertical;min-height:62px;line-height:1.4}
+.field .hint{font-size:11px;color:var(--m);margin:4px 0 0}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;padding:8px 0;border:1px solid var(--l);border-radius:8px;background:white;font-size:12.5px;font-family:inherit;cursor:pointer;color:var(--t)}
+.seg button.on{border-color:var(--a);color:var(--a);font-weight:bold;background:#fff5fa}
+.pick{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:1.5px dashed var(--ab);border-radius:12px;background:#fff5fa;color:var(--a);font-size:14px;font-weight:bold;cursor:pointer;font-family:inherit}
+.pick.drag-over{background:#ffe3ef;border-color:var(--a)}
+.go{display:block;width:100%;padding:14px;background:var(--a);color:white;border:0;border-radius:24px;font-size:14px;font-weight:bold;cursor:pointer;text-align:center;font-family:inherit}
+.go:hover{background:#e0247a}
+.go:disabled{background:var(--ab);cursor:not-allowed}
+.preview-outer{display:flex;justify-content:center}
+.preview-wrap{width:360px;overflow:hidden;position:relative;border-radius:10px;box-shadow:0 4px 20px rgba(23,21,18,.12);background:#fff;cursor:grab;touch-action:none}
+.preview-wrap.dragging{cursor:grabbing}
+.preview-wrap.empty{cursor:pointer;touch-action:auto}
+.drag-hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:5px 10px;border-radius:12px;pointer-events:none;z-index:5;white-space:nowrap}
+.preview-wrap.empty .drag-hint{display:none}
+
+/* 저장되는 이미지 — 1080px 기준으로 그리고 미리보기는 축소해서 보여줌 */
+#posterRoot{font-family:"Noto Sans KR",sans-serif;width:1080px;transform-origin:top left;position:absolute;top:0;left:0;background:#fff;display:flex;flex-direction:column}
+.p-photo{position:relative;flex:1;overflow:hidden;background:#eceef3}
+.p-photo img{position:absolute;top:50%;left:50%;max-width:none;display:block;user-select:none;-webkit-user-drag:none}
+.p-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;color:#9a93a0;font-size:44px;font-weight:700}
+.p-empty b{font-size:140px;line-height:1}
+.p-scrim{position:absolute;left:0;right:0;bottom:0;height:62%;background:linear-gradient(to top,rgba(0,0,0,.72) 0%,rgba(0,0,0,.38) 45%,rgba(0,0,0,0) 100%)}
+.p-text{position:absolute;left:calc(72px*var(--k,1));right:calc(72px*var(--k,1));bottom:calc(48px*var(--k,1))}
+.p-title{font-size:58px;font-weight:900;color:#fff;line-height:1.25;white-space:pre-wrap;text-shadow:0 4px 16px rgba(0,0,0,.4)}
+.p-sub{margin-top:calc(16px*var(--k,1));font-size:26px;font-weight:600;color:#fff;opacity:.92;line-height:1.4;white-space:pre-wrap;text-shadow:0 2px 8px rgba(0,0,0,.35)}
+.p-foot{flex:none;padding:calc(26px*var(--k,1)) calc(72px*var(--k,1));display:flex;align-items:center;justify-content:space-between;gap:24px;border-top:1px solid #eee;background:#fff}
+.p-foot img{height:calc(80px*var(--k,1));width:auto;display:block}
+.p-foot .r{font-size:calc(20px*var(--k,1));color:var(--m);font-weight:600;text-align:right}
+.p-foot.solo{justify-content:center}
+
+.save-ov{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
+.save-ov p{margin:0;color:#fff;font-size:15px}
+.save-ov img{max-width:100%;max-height:72vh;border-radius:8px;-webkit-touch-callout:default}
+.save-ov button{padding:10px 28px;border:0;border-radius:20px;background:#fff;color:var(--t);font-size:14px;font-weight:bold;cursor:pointer}
+
+@media(max-width:860px){
+  .layout{grid-template-columns:1fr;padding-top:0}
+  /* 휴대폰: 미리보기를 입력칸 위에 두고, 스크롤해도 화면 위에 붙어 있게 */
+  .preview-outer{order:-1;position:sticky;top:0;z-index:10;background:var(--b);padding:12px 0;margin:0 -20px;box-shadow:0 6px 10px -8px rgba(23,21,18,.25)}
+}
+</style></head><body>
+<div class="topbar"><img src="logo-colorm.png" alt="COLOR.M"><h1>SNS 이미지 만들기</h1></div>
+<div class="layout">
+  <div class="panel">
+    <div class="field">
+      <button type="button" class="pick" id="pickBtn">📷 사진 선택하기</button>
+      <input type="file" id="fileInput" accept="image/*" hidden>
+      <p class="hint" style="text-align:center">사진을 이 버튼이나 미리보기에 끌어다 놓아도 돼요</p>
+    </div>
+    <div class="field"><label>비율</label><select id="f_ratio"></select><p class="hint">사진에 맞춰 자동으로 추천하며, 직접 바꿀 수도 있어요</p></div>
+    <div class="field"><label>확대</label><input type="range" id="f_zoom" min="100" max="250" value="100" style="width:100%;padding:0;border:0"><p class="hint">미리보기를 드래그하면 위치도 옮길 수 있어요 (폰은 두 손가락으로 확대)</p></div>
+    <div class="field"><label>제목</label><textarea id="f_title" rows="2" placeholder="이미지에 넣을 제목을 입력하세요"></textarea><p class="hint">줄을 바꾸면 이미지에서도 줄이 바뀌어요</p></div>
+    <div class="field"><label>작은 글씨 <span>(선택)</span></label><input id="f_sub" placeholder="예: 2026 가을 컬러 수업 · 3학년 2반"></div>
+    <div class="field"><label>글자 크기</label><div class="seg" id="f_size"><button type="button" data-v="0.8">작게</button><button type="button" data-v="1" class="on">보통</button><button type="button" data-v="1.25">크게</button></div></div>
+    <div class="field"><label>하단 오른쪽 문구 <span>(선택)</span></label><input id="f_foot" placeholder="예: 홈페이지 주소나 SNS 계정"><p class="hint">비워두면 COLOR.M 로고만 가운데에 들어가요</p></div>
+    <button class="go" id="downloadBtn" disabled>⬇️ PNG로 저장</button>
+    <p class="hint" style="text-align:center;margin:0" id="dimHint"></p>
+  </div>
+  <div class="preview-outer"><div class="preview-wrap empty" id="previewWrap"><div class="drag-hint">🖐️ 드래그해서 사진 위치 조정</div>
+    <div id="posterRoot">
+      <div class="p-photo">
+        <img id="o_img" alt="" hidden>
+        <div class="p-empty" id="o_empty"><b>📷</b>사진을 올려주세요</div>
+        <div class="p-scrim" id="o_scrim"></div>
+        <div class="p-text"><div class="p-title" id="o_title"></div><div class="p-sub" id="o_sub"></div></div>
+      </div>
+      <div class="p-foot" id="o_foot"><img src="logo-colorm.png" alt="COLOR.M"><div class="r" id="o_footText"></div></div>
+    </div>
+  </div></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const RATIOS = {
+  "4:5": {w:1080,h:1350,label:"4:5 (세로형, 추천)",use:"인스타그램 피드"},
+  "3:4": {w:1080,h:1440,label:"3:4 (세로형, 긴)",use:"인스타그램 · 스레드"},
+  "1:1": {w:1080,h:1080,label:"1:1 (정사각형)",use:"인스타그램 · 카카오"},
+  "9:16": {w:1080,h:1920,label:"9:16 (스토리·릴스)",use:"인스타그램 스토리 · 릴스 · 쇼츠"},
+  "16:9": {w:1920,h:1080,label:"16:9 (가로형)",use:"유튜브 · 블로그 · 발표 자료"},
+  "1.91:1": {w:1910,h:1000,label:"1.91:1 (가로형, 링크 공유)",use:"페이스북 · 블로그 대표 이미지"}
+};
+$("f_ratio").innerHTML = Object.keys(RATIOS).map(k => `<option value="${k}">${RATIOS[k].label}</option>`).join("");
+
+let ratioManuallySet = false;
+let textScale = 1;
+let photoName = "";
+const REF_H = 1350; // 4:5 기준 — 글자 크기가 "정상"으로 보이는 기준 비율
+const BASE_TITLE_SIZE = 58, BASE_SUB_SIZE = 26;
+let previewScale = 1/3;
+let imgView = {zoom:1, panX:0, panY:0, naturalW:0, naturalH:0, baseW:0, baseH:0};
+
+const ratio = () => RATIOS[$("f_ratio").value];
+
+/* 미리보기 크기 — 세로형은 폭 360px, 가로형은 최대 560px. 휴대폰은 화면 높이의 45%까지 */
+function applyRatio(){
+  const r = ratio();
+  const outer = document.querySelector(".preview-outer");
+  const sticky = getComputedStyle(outer).position === "sticky";
+  const room = (outer.clientWidth || 360) - (sticky ? 32 : 0);
+  let viewW = Math.min(r.w > r.h ? 560 : 360, room);
+  if(sticky) viewW = Math.min(viewW, window.innerHeight * 0.45 * r.w / r.h);
+  previewScale = viewW / r.w;
+  const root = $("posterRoot");
+  root.style.width = r.w + "px";
+  root.style.height = r.h + "px";
+  root.style.transform = `scale(${previewScale})`;
+  const wrap = $("previewWrap");
+  wrap.style.width = viewW + "px";
+  wrap.style.height = (r.h * previewScale) + "px";
+  $("dimHint").textContent = `${r.w} × ${r.h}px (${r.use})`;
+  /* 가로형은 화면이 넓어서 로고·글자를 키움, 스토리처럼 아주 긴 세로형은 너무 커지지 않게 */
+  const wide = r.w > r.h;
+  root.style.setProperty("--k", wide ? 1.4 : 1);
+  const s = (wide ? 1.05 : Math.min(r.h / REF_H, 1.15)) * textScale;
+  $("o_title").style.fontSize = (BASE_TITLE_SIZE * s) + "px";
+  $("o_sub").style.fontSize = (BASE_SUB_SIZE * s) + "px";
+}
+
+const TOP_BIAS = 0.6; // 위아래가 잘릴 때 0 = 가운데, 1 = 사진 맨 위에 맞춤
+function fitImage(){
+  if(!imgView.naturalW) return;
+  const r = ratio();
+  const sx = r.w / imgView.naturalW, sy = r.h / imgView.naturalH;
+  /* 사진과 틀 모양이 비슷하면 15% 더 키워 옮길 여유를 줌. 이미 많이 잘리면 더 키우지 않음 */
+  const extra = Math.max(sx, sy) / Math.min(sx, sy) >= 1.15 ? 1 : 1.15;
+  const cover = Math.max(sx, sy) * extra;
+  imgView.baseW = imgView.naturalW * cover;
+  imgView.baseH = imgView.naturalH * cover;
+  imgView.zoom = 1; imgView.panX = 0;
+  imgView.panY = Math.max(0, imgView.baseH - r.h) / 2 * TOP_BIAS;
+  $("f_zoom").value = 100;
+  applyImgTransform();
+}
+
+function applyImgTransform(){
+  if(!imgView.naturalW) return;
+  const r = ratio();
+  const effW = imgView.baseW * imgView.zoom, effH = imgView.baseH * imgView.zoom;
+  const maxX = Math.max(0, (effW - r.w) / 2), maxY = Math.max(0, (effH - r.h) / 2);
+  imgView.panX = Math.max(-maxX, Math.min(maxX, imgView.panX));
+  imgView.panY = Math.max(-maxY, Math.min(maxY, imgView.panY));
+  const img = $("o_img");
+  img.style.width = effW + "px";
+  img.style.height = effH + "px";
+  img.style.transform = `translate(-50%,-50%) translate(${imgView.panX}px, ${imgView.panY}px)`;
+}
+
+function syncText(){
+  const title = $("f_title").value, sub = $("f_sub").value.trim(), foot = $("f_foot").value.trim();
+  $("o_title").textContent = title;
+  $("o_sub").textContent = sub;
+  $("o_sub").style.display = sub ? "" : "none";
+  /* 글자가 없으면 사진을 어둡게 덮지 않음 */
+  $("o_scrim").style.display = (title.trim() || sub) ? "" : "none";
+  $("o_footText").textContent = foot;
+  $("o_footText").style.display = foot ? "" : "none";
+  $("o_foot").classList.toggle("solo", !foot);
+}
+
+/* ---------- 사진 불러오기 ---------- */
+let currentUrl = null;
+function loadFile(file){
+  if(!file || !file.type.startsWith("image/")){ alert("사진(이미지) 파일만 올릴 수 있어요."); return; }
+  const url = URL.createObjectURL(file);
+  const probe = new Image();
+  probe.onload = () => {
+    if(currentUrl) URL.revokeObjectURL(currentUrl);
+    currentUrl = url;
+    photoName = file.name.replace(/\.[^.]+$/, "");
+    imgView.naturalW = probe.naturalWidth;
+    imgView.naturalH = probe.naturalHeight;
+    const img = $("o_img");
+    img.src = url; img.hidden = false;
+    $("o_empty").hidden = true;
+    $("previewWrap").classList.remove("empty");
+    $("downloadBtn").disabled = false;
+    if(!ratioManuallySet){
+      const ar = probe.naturalWidth / probe.naturalHeight;
+      $("f_ratio").value = ar >= 1.3 ? "16:9" : ar >= 0.95 ? "1:1" : ar >= 0.7 ? "4:5" : "9:16";
+      applyRatio();
+    }
+    fitImage();
+    clearPending();
+  };
+  probe.onerror = () => { URL.revokeObjectURL(url); alert("이 사진은 열 수 없어요. 다른 사진(JPG·PNG)으로 시도해 주세요."); };
+  probe.src = url;
+}
+$("pickBtn").onclick = () => $("fileInput").click();
+$("fileInput").onchange = e => { loadFile(e.target.files[0]); e.target.value = ""; };
+/* 끌어다 놓기 */
+[$("pickBtn"), $("previewWrap")].forEach(el => {
+  el.addEventListener("dragover", e => { e.preventDefault(); $("pickBtn").classList.add("drag-over"); });
+  el.addEventListener("dragleave", () => $("pickBtn").classList.remove("drag-over"));
+  el.addEventListener("drop", e => { e.preventDefault(); $("pickBtn").classList.remove("drag-over"); loadFile(e.dataTransfer.files[0]); });
+});
+/* 복사한 이미지 붙여넣기 (Ctrl+V) */
+document.addEventListener("paste", e => {
+  const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
+  if(item) loadFile(item.getAsFile());
+});
+
+/* ---------- 사진 위치 조정: 마우스·터치 공통 — 한 손가락은 이동, 두 손가락은 확대/축소 ---------- */
+(function wireDrag(){
+  const wrap = $("previewWrap");
+  const pts = new Map();
+  let start = {x:0,y:0}, startPan = {x:0,y:0}, startDist = 0, startZoom = 1;
+  const center = () => { let x = 0, y = 0; pts.forEach(p => { x += p.x; y += p.y; }); return {x:x/pts.size, y:y/pts.size}; };
+  const dist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+  /* 손가락 수가 바뀔 때마다 기준점을 다시 잡아야 사진이 튀지 않음 */
+  function rebase(){
+    start = center();
+    startPan = {x:imgView.panX, y:imgView.panY};
+    startZoom = imgView.zoom;
+    startDist = pts.size >= 2 ? dist() : 0;
+  }
+  wrap.addEventListener("pointerdown", e => {
+    if(!imgView.naturalW){ $("fileInput").click(); return; } // 사진이 없으면 눌러서 선택
+    if(e.pointerType === "mouse" && e.button !== 0) return;
+    wrap.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    wrap.classList.add("dragging");
+    rebase();
+    clearPending();
+    e.preventDefault();
+  });
+  wrap.addEventListener("pointermove", e => {
+    if(!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(pts.size >= 2 && startDist > 0){
+      const z = Math.max(1, Math.min(2.5, startZoom * dist() / startDist));
+      imgView.zoom = z;
+      $("f_zoom").value = Math.round(z * 100);
+    }
+    const c = center();
+    imgView.panX = startPan.x + (c.x - start.x) / previewScale;
+    imgView.panY = startPan.y + (c.y - start.y) / previewScale;
+    applyImgTransform();
+  });
+  function end(e){
+    if(!pts.delete(e.pointerId)) return;
+    if(pts.size) rebase(); else wrap.classList.remove("dragging");
+  }
+  wrap.addEventListener("pointerup", end);
+  wrap.addEventListener("pointercancel", end);
+})();
+
+/* ---------- 입력칸 ---------- */
+["f_title","f_sub","f_foot"].forEach(id => $(id).addEventListener("input", syncText));
+$("f_ratio").addEventListener("change", () => { ratioManuallySet = true; applyRatio(); fitImage(); });
+$("f_zoom").addEventListener("input", e => { imgView.zoom = Number(e.target.value)/100; applyImgTransform(); });
+$("f_size").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  $("f_size").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  textScale = Number(b.dataset.v);
+  applyRatio();
+  clearPending();
+});
+document.querySelector(".panel").addEventListener("input", clearPending);
+document.querySelector(".panel").addEventListener("change", clearPending);
+window.addEventListener("resize", applyRatio);
+
+/* ---------- 저장 ---------- */
+const SAVE_LABEL = "⬇️ PNG로 저장";
+/* 휴대폰(터치 화면)이면 공유 시트로 저장 — 아이폰은 일반 다운로드로는 사진 앱에 저장이 안 됨 */
+const IS_TOUCH = matchMedia("(pointer:coarse)").matches;
+/* 이미지 만드는 시간이 길면 브라우저가 공유를 막음 → 만든 파일을 들고 있다가 한 번 더 누르면 공유 */
+let pendingFile = null;
+function clearPending(){
+  if(!pendingFile) return;
+  pendingFile = null;
+  $("downloadBtn").textContent = SAVE_LABEL;
+}
+async function shareFile(file){
+  try{
+    await navigator.share({files:[file]});
+  }catch(e){
+    if(e.name === "AbortError") return; // 사용자가 공유 창을 닫음
+    if(e.name === "NotAllowedError"){
+      pendingFile = file;
+      $("downloadBtn").textContent = "📲 사진 저장하기 (한 번 더 눌러주세요)";
+      return;
+    }
+    showSaveOverlay(URL.createObjectURL(file));
+  }
+}
+/* 공유도 다운로드도 막힌 곳(카카오톡·인스타그램 앱 안 브라우저 등) — 이미지를 길게 눌러 저장 */
+function showSaveOverlay(src){
+  const ov = document.createElement("div");
+  ov.className = "save-ov";
+  ov.innerHTML = `<p>이미지를 <b>길게 눌러</b> 저장해 주세요</p><img src="${src}" alt="SNS 이미지"><button type="button">닫기</button>`;
+  ov.querySelector("button").onclick = () => ov.remove();
+  document.body.appendChild(ov);
+}
+/* 글꼴을 다 받기 전에 저장하면 기기 기본 글꼴로 찍힘 — 이미지에 쓰는 굵기·글자를 먼저 받아둠 (최대 3초) */
+function posterFontsReady(){
+  if(!document.fonts) return Promise.resolve();
+  const text = $("posterRoot").textContent;
+  const loads = [400, 600, 700, 900].map(w => document.fonts.load(`${w} 24px "Noto Sans KR"`, text));
+  return Promise.race([Promise.all(loads), new Promise(r => setTimeout(r, 3000))]).catch(() => {});
+}
+function fileName(){
+  const base = ($("f_title").value.trim().split("\n")[0] || photoName || "colorm-sns").replace(/[^a-zA-Z0-9가-힣]+/g, "_").replace(/^_|_$/g, "");
+  return (base || "colorm-sns") + ".png";
+}
+
+async function download(){
+  const btn = $("downloadBtn");
+  if(pendingFile){ const f = pendingFile; clearPending(); return shareFile(f); }
+  if(!imgView.naturalW) return;
+  btn.disabled = true; btn.textContent = "생성 중...";
+  await posterFontsReady();
+  const r = ratio();
+  const clone = $("posterRoot").cloneNode(true);
+  Object.assign(clone.style, {transform:"none", position:"fixed", top:"0", left:"-99999px", width:r.w+"px", height:r.h+"px"});
+  document.body.appendChild(clone);
+  try{
+    const canvas = await html2canvas(clone, {width:r.w, height:r.h, scale:1, useCORS:true, backgroundColor:"#ffffff"});
+    const name = fileName();
+    const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
+    const file = new File([blob], name, {type:"image/png"});
+    btn.disabled = false; btn.textContent = SAVE_LABEL;
+    if(IS_TOUCH){
+      if(navigator.canShare && navigator.canShare({files:[file]})) await shareFile(file);
+      else showSaveOverlay(canvas.toDataURL("image/png"));
+    }else{
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = name;
+      link.href = url;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    }
+  }catch(e){
+    alert("이미지 생성에 실패했어요: " + e.message);
+  }finally{
+    document.body.removeChild(clone);
+    btn.disabled = false;
+    if(!pendingFile) btn.textContent = SAVE_LABEL;
+  }
+}
+$("downloadBtn").onclick = download;
+
+syncText();
+applyRatio();
+</script>
+</body></html>
