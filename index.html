@@ -159,6 +159,11 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .feed-tile.empty{display:flex;align-items:center;justify-content:center;color:#bbb;font-size:22px;background:#f5f5f7}
 .feed-foot{padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--l)}
 .feed-foot .hint{font-size:11px;color:var(--m);margin:0;text-align:center;line-height:1.5}
+.resume{background:#fff5fa;border:1.5px solid var(--ab);border-radius:12px;padding:12px 14px;font-size:13px}
+.resume span{display:block;color:var(--m);font-size:11.5px;margin-top:2px}
+.order button.ok{background:var(--a);border-color:var(--a);color:#fff;font-weight:bold}
+.work-row{margin-top:-4px}
+.work-row button{padding:10px 0;font-weight:bold}
 .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:300;background:rgba(23,21,18,.9);color:#fff;font-size:13.5px;padding:12px 18px;border-radius:22px;max-width:calc(100% - 32px);text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 /* 사진 자르기 화면 */
 .crop-ov{position:fixed;inset:0;z-index:200;background:rgba(20,20,24,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px}
@@ -194,6 +199,11 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 <div class="topbar"><img src="logo-colorm.png" alt="COLOR.M"><div class="right"><button type="button" class="reset-btn" id="resetBtn" hidden>↺ 새로 시작</button><h1>SNS 이미지 만들기</h1></div></div>
 <div class="layout">
   <div class="panel">
+    <div class="resume" id="resumeBox" hidden>
+      <b>💾 이전에 하던 작업이 있어요</b>
+      <span id="resumeInfo"></span>
+      <div class="order" style="margin-top:8px"><button type="button" class="ok" id="resumeYes">이어서 하기</button><button type="button" id="resumeNo">지우고 새로</button></div>
+    </div>
     <div class="field">
       <label>용도</label>
       <div class="seg" id="f_preset"><button type="button" data-v="photo" class="on">📷 일반 사진</button><button type="button" data-v="review">📝 후기 캡처</button><button type="button" data-v="reels">🎬 릴스 표지</button></div>
@@ -261,6 +271,9 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     <button class="go" id="downloadBtn" disabled>⬇️ PNG로 저장</button>
     <button class="go sub" id="saveOneBtn" hidden>이 사진만 저장</button>
     <button class="go sub" id="feedBtn" hidden>📱 피드 미리보기</button>
+    <div class="order work-row"><button type="button" id="workSave" disabled>💾 작업 저장</button><button type="button" id="workLoad">📂 작업 불러오기</button></div>
+    <input type="file" id="workFile" hidden>
+    <p class="hint" style="margin:-8px 0 0;text-align:center">작업 저장은 사진·글자·가리기·설정을 파일 하나로 저장해요. 나중에 불러와서 이어서 고칠 수 있어요</p>
     <p class="hint" style="text-align:center;margin:0" id="dimHint"></p>
   </div>
   <div class="preview-outer">
@@ -527,6 +540,8 @@ function renderStrip(){
   $("saveOneBtn").hidden = n < 2;
   $("resetBtn").hidden = !n;
   $("feedBtn").hidden = !n;
+  $("workSave").disabled = !n;
+  if(n && !restoring) $("resumeBox").hidden = true; // 새 작업을 시작하면 '이전 작업' 안내는 숨김
   $("blurField").hidden = !n;
   $("cropField").hidden = !n;
   $("cropFor").textContent = n > 1 ? `(${cur + 1}번 사진)` : "";
@@ -1146,23 +1161,27 @@ $("cropBtn").onclick = openCrop;
 document.addEventListener("keydown", e => { if(e.key === "Escape" && cropEd) closeCrop(); });
 window.addEventListener("resize", () => { if(cropEd) drawCrop(); });
 
+const isFullRect = r => r.x < 0.002 && r.y < 0.002 && r.w > 0.996 && r.h > 0.996;
+/* 원본 o에서 rect 영역만 잘라낸 사진을 만듦 (전체면 원본 그대로) */
+async function cropImage(o, rect){
+  if(isFullRect(rect)) return {el:o.el, url:o.url, nw:o.w, nh:o.h};
+  const sx = Math.round(rect.x * o.w), sy = Math.round(rect.y * o.h);
+  const nw = Math.max(1, Math.round(rect.w * o.w)), nh = Math.max(1, Math.round(rect.h * o.h));
+  const c = document.createElement("canvas"); c.width = nw; c.height = nh;
+  c.getContext("2d").drawImage(o.el, sx, sy, nw, nh, 0, 0, nw, nh);
+  const blob = await new Promise(res => c.toBlob(res, "image/jpeg", 0.95));
+  const url = URL.createObjectURL(blob);
+  const el = new Image();
+  await new Promise(res => { el.onload = res; el.onerror = res; el.src = url; });
+  return {el, url, nw, nh};
+}
 $("cropApply").onclick = async () => {
   if(!cropEd) return;
   const {p, o, rect} = cropEd;
   closeCrop();
-  const full = rect.x < 0.002 && rect.y < 0.002 && rect.w > 0.996 && rect.h > 0.996;
+  const full = isFullRect(rect);
   const prev = p.crop || {x:0, y:0, w:1, h:1};
-  let el = o.el, url = o.url, nw = o.w, nh = o.h;
-  if(!full){
-    const sx = Math.round(rect.x * o.w), sy = Math.round(rect.y * o.h);
-    nw = Math.max(1, Math.round(rect.w * o.w)); nh = Math.max(1, Math.round(rect.h * o.h));
-    const c = document.createElement("canvas"); c.width = nw; c.height = nh;
-    c.getContext("2d").drawImage(o.el, sx, sy, nw, nh, 0, 0, nw, nh);
-    const blob = await new Promise(res => c.toBlob(res, "image/jpeg", 0.95));
-    url = URL.createObjectURL(blob);
-    el = new Image();
-    await new Promise(res => { el.onload = res; el.onerror = res; el.src = url; });
-  }
+  const {el, url, nw, nh} = await cropImage(o, rect);
   await p.ready;
   /* 이전에 만든 사진 정리 — 원본은 남겨둠 */
   if(p.url !== p.srcUrl) URL.revokeObjectURL(p.url);
@@ -1198,7 +1217,9 @@ const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IN_APP = /KAKAOTALK|Instagram|FBAN|FBAV|Line\/|NAVER\(inapp|DaumApps|everytimeApp|BAND\//i.test(navigator.userAgent);
 /* 이미지 만드는 시간이 길면 브라우저가 공유를 막음 → 만든 파일을 들고 있다가 한 번 더 누르면 공유 */
 let pendingFiles = null;
+/* 무언가 바뀔 때마다 불림 → 저장 대기 이미지를 버리고, 자동 임시 저장도 예약 */
 function clearPending(){
+  if(typeof scheduleAutosave === "function") scheduleAutosave();
   if(!pendingFiles) return;
   pendingFiles = null;
   $("downloadBtn").textContent = saveLabel();
@@ -1306,12 +1327,169 @@ function toast(msg){
 function fileToDataURL(f){
   return new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(f); });
 }
+/* ---------- 작업 저장·불러오기 + 자동 임시 저장 ---------- */
+/* 작업 = 설정 + 사진마다 {원본 사진, 자르기, 가리기, 위치·확대, 제목}. 원본에서 다시 만들어서 그대로 이어서 고칠 수 있음 */
+const segVal = id => document.querySelector(`#${id} .on`)?.dataset.v;
+function setSegUI(id, v){ $(id).querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === v)); }
+/* 원본 사진 파일 — 너무 크면(긴 변 3000px 넘거나 4MB 넘으면) 줄여서 저장 */
+async function originalBlob(p){
+  const el = p.orig ? p.orig.el : p.el, url = p.orig ? p.orig.url : p.srcUrl;
+  const blob = await (await fetch(url)).blob();
+  const long = Math.max(el.naturalWidth, el.naturalHeight);
+  if(long <= 3000 && blob.size <= 4e6) return blob;
+  const s = Math.min(1, 3000 / long), c = document.createElement("canvas");
+  c.width = Math.round(el.naturalWidth * s); c.height = Math.round(el.naturalHeight * s);
+  c.getContext("2d").drawImage(el, 0, 0, c.width, c.height);
+  return await new Promise(r => c.toBlob(r, "image/jpeg", 0.92));
+}
+async function collectWork(){
+  return {
+    app:"colorm-sns", v:1, savedAt:Date.now(), cur,
+    settings:{
+      preset:segVal("f_preset"), ratio:$("f_ratio").value, ratioManuallySet, reelsSafe:$("f_reelsSafe").checked,
+      fit:segVal("f_fit"), bg:segVal("f_bgMode"), textColor:segVal("f_textColor"), shade:segVal("f_shade"),
+      pos:segVal("f_pos"), align:segVal("f_align"), size:segVal("f_size"), textOn:segVal("f_textOn"),
+      shared:{...shared}, foot:$("f_foot").value,
+      blurType:segVal("f_blurType"), blurShape:segVal("f_blurShape"), blurLevel
+    },
+    photos:await Promise.all(photos.map(async p => ({
+      name:p.name, blob:await originalBlob(p), crop:p.crop || null, blurs:p.blurs,
+      zoom:p.zoom, panX:p.panX, panY:p.panY, manual:!!p.manual, title:p.title, sub:p.sub
+    })))
+  };
+}
+let restoring = false;
+async function restoreWork(w){
+  restoring = true;
+  try{
+    if(blurMode) setBlurMode(false);
+    photos.forEach(p => { if(p.url !== p.srcUrl) URL.revokeObjectURL(p.url); URL.revokeObjectURL(p.srcUrl); if(p.orig && p.orig.url !== p.srcUrl) URL.revokeObjectURL(p.orig.url); });
+    photos = []; cur = -1;
+    const s = w.settings;
+    /* 설정: 버튼 표시와 값을 직접 맞춤 (버튼을 누르는 것처럼 하면 사진이 다시 맞춰져서) */
+    setSegUI("f_preset", s.preset); $("reviewBgRow").hidden = s.preset !== "review";
+    $("f_ratio").value = s.ratio; ratioManuallySet = s.ratioManuallySet; $("f_reelsSafe").checked = s.reelsSafe !== false;
+    setSegUI("f_fit", s.fit); fitMode = s.fit;
+    setSegUI("f_bgMode", s.bg); bgMode = s.bg; setSegUI("f_reviewBg", s.bg);
+    setSegUI("f_textColor", s.textColor); setSegUI("f_shade", s.shade);
+    setSegUI("f_pos", s.pos); setSegUI("f_align", s.align);
+    setSegUI("f_size", s.size); textScale = Number(s.size);
+    setSegUI("f_textOn", s.textOn); textOn = s.textOn;
+    setSegUI("f_blurType", s.blurType); blurType = s.blurType;
+    setSegUI("f_blurShape", s.blurShape); blurShape = s.blurShape;
+    blurLevel = s.blurLevel; $("f_blurLevel").value = s.blurLevel; $("blurLevelOut").textContent = s.blurLevel;
+    root.className = [`pos-${s.pos}`, `align-${s.align}`, s.bg !== "blur" ? `bg-${s.bg}` : "", s.textColor !== "white" ? `tc-${s.textColor}` : "", s.shade !== "strong" ? `shade-${s.shade}` : ""].filter(Boolean).join(" ");
+    shared.title = s.shared.title || ""; shared.sub = s.shared.sub || "";
+    $("f_foot").value = s.foot || "";
+    applyRatio();
+    /* 사진: 원본을 불러와 자르기를 다시 하고, 가리기·위치·제목을 되돌림 */
+    for(const sp of w.photos){
+      const p = await readImage(new File([sp.blob], (sp.name || "photo") + ".jpg", {type:sp.blob.type || "image/jpeg"}));
+      if(!p) continue;
+      p.name = sp.name;
+      if(sp.crop){
+        const o = {el:p.el, url:p.srcUrl, w:p.naturalW, h:p.naturalH};
+        const c = await cropImage(o, sp.crop);
+        Object.assign(p, {orig:o, crop:sp.crop, el:c.el, srcUrl:c.url, url:c.url, naturalW:c.nw, naturalH:c.nh, bgUrl:makeBg(c.el)});
+      }
+      p.blurs = sp.blurs || [];
+      p.title = sp.title; p.sub = sp.sub;
+      photos.push(p);
+    }
+    photos.forEach((p, i) => {
+      const sp = w.photos[i];
+      fitPhoto(p);
+      Object.assign(p, {zoom:sp.zoom, panX:sp.panX, panY:sp.panY, manual:sp.manual});
+      if(p.blurs.length) rebuild(p);
+    });
+    show(photos.length ? Math.min(Math.max(w.cur || 0, 0), photos.length - 1) : -1);
+  }finally{ restoring = false; }
+}
+
+/* 작업 파일(.colorm) — 사진은 글자(base64)로 바꿔 JSON 한 파일에 담음 */
+$("workSave").onclick = async () => {
+  if(!photos.length) return;
+  const btn = $("workSave"); btn.disabled = true; btn.textContent = "저장 중...";
+  try{
+    const w = await collectWork();
+    for(const sp of w.photos){ sp.data = await fileToDataURL(sp.blob); delete sp.blob; }
+    const blob = new Blob([JSON.stringify(w)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.download = baseName() + "_작업.colorm"; a.href = url; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    toast("작업 파일을 저장했어요 · '📂 작업 불러오기'로 이어서 고칠 수 있어요");
+  }catch(e){ alert("작업 저장에 실패했어요: " + e.message); }
+  finally{ btn.disabled = !photos.length; btn.textContent = "💾 작업 저장"; }
+};
+$("workLoad").onclick = () => $("workFile").click();
+$("workFile").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if(!f) return;
+  if(photos.length && !confirm("지금 작업이 불러온 작업으로 바뀌어요. 계속할까요?")) return;
+  try{
+    const w = JSON.parse(await f.text());
+    if(w.app !== "colorm-sns" || !Array.isArray(w.photos)) throw new Error("COLOR.M 작업 파일이 아니에요");
+    for(const sp of w.photos) sp.blob = await (await fetch(sp.data)).blob();
+    await restoreWork(w);
+    $("resumeBox").hidden = true;
+    toast(`작업을 불러왔어요 (사진 ${photos.length}장)`);
+  }catch(err){ alert("작업을 불러오지 못했어요: " + err.message); }
+};
+
+/* 자동 임시 저장 — 이 브라우저(IndexedDB)에 마지막 작업을 보관. 창을 닫아도 다시 열면 이어서 할 수 있음 */
+function idb(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("cmSnsWork", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("work");
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function idbOp(mode, fn){
+  const db = await idb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction("work", mode), req = fn(tx.objectStore("work"));
+    tx.oncomplete = () => { db.close(); res(req && req.result); };
+    tx.onerror = () => { db.close(); rej(tx.error); };
+  });
+}
+const idbGet = () => idbOp("readonly", s => s.get("last")).catch(() => null);
+const idbPut = w => idbOp("readwrite", s => s.put(w, "last")).catch(() => {});
+const idbDel = () => idbOp("readwrite", s => s.delete("last")).catch(() => {});
+let autosaveTimer = null, sessionHadPhotos = false;
+function scheduleAutosave(){
+  if(restoring) return;
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(async () => {
+    if(restoring) return;
+    /* 사진이 없으면: 이번에 작업하다 다 뺀 경우만 지움 (아직 '이어서 하기'를 고르기 전이면 이전 작업 보존) */
+    if(!photos.length){ if(sessionHadPhotos) idbDel(); return; }
+    sessionHadPhotos = true;
+    try{ await Promise.all(photos.map(p => p.ready)); await idbPut(await collectWork()); }catch(e){}
+  }, 1500);
+}
+/* 처음 열 때 이전 작업이 있으면 물어봄 */
+(async () => {
+  const w = await idbGet();
+  if(!w || !w.photos || !w.photos.length) return;
+  const d = new Date(w.savedAt);
+  $("resumeInfo").textContent = `사진 ${w.photos.length}장 · ${d.getMonth() + 1}월 ${d.getDate()}일 ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")} 저장${w.settings.shared.title ? " · " + w.settings.shared.title.split("\n")[0] : ""}`;
+  $("resumeBox").hidden = false;
+  $("resumeYes").onclick = async () => {
+    $("resumeBox").hidden = true;
+    await restoreWork(w);
+    toast(`이전 작업을 불러왔어요 (사진 ${photos.length}장)`);
+  };
+  $("resumeNo").onclick = () => { $("resumeBox").hidden = true; idbDel(); };
+})();
+
 /* 새로 시작 — 사진·글자·설정을 모두 지우고 처음 화면으로 (페이지를 다시 불러오는 게 가장 깔끔) */
 $("resetBtn").onclick = () => {
   if(!confirm("만든 내용(사진·글자·가리기)이 모두 지워져요.\n새로 시작할까요?")) return;
   photos.forEach(p => { if(p.url !== p.srcUrl) URL.revokeObjectURL(p.url); URL.revokeObjectURL(p.srcUrl); });
   photos = [];
-  location.reload();
+  clearTimeout(autosaveTimer);
+  idbDel().finally(() => location.reload()); // 자동 임시 저장도 지움
 };
 $("downloadBtn").onclick = () => {
   if(pendingFiles){ const f = pendingFiles; clearPending(); return shareFiles(f); }
