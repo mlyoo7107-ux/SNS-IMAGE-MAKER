@@ -100,6 +100,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .seg .sw{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid #ccc;margin-right:6px;vertical-align:-1px}
 .bg-white .p-photo{background:#fff}
 .bg-dark .p-photo{background:#2d2a2e}
+.bg-gray .p-photo{background:#e6e6ea}
 .bg-pink .p-photo{background:#fde7f0}
 .p-main.card{border-radius:22px;box-shadow:0 14px 40px rgba(0,0,0,.22)}
 .bg-white .p-main.card{box-shadow:0 10px 34px rgba(0,0,0,.14);outline:1px solid #ececf0}
@@ -213,6 +214,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
         <label style="margin-top:10px">후기 배경</label>
         <div class="seg" id="f_reviewBg">
           <button type="button" data-v="white" class="on"><span class="sw" style="background:#fff"></span>흰색</button>
+          <button type="button" data-v="gray"><span class="sw" style="background:#e6e6ea"></span>연그레이</button>
           <button type="button" data-v="dark"><span class="sw" style="background:#2d2a2e"></span>차콜</button>
           <button type="button" data-v="pink"><span class="sw" style="background:#fde7f0"></span>핑크</button>
         </div>
@@ -251,7 +253,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
       <label>사진 맞춤</label>
       <div class="seg" id="f_fit"><button type="button" data-v="cover" class="on">꽉 채우기</button><button type="button" data-v="contain">전체 넣기</button></div>
       <label style="margin-top:10px">빈 곳 배경</label>
-      <div class="seg" id="f_bgMode"><button type="button" data-v="white" class="on">흰색</button><button type="button" data-v="dark">차콜</button><button type="button" data-v="pink">핑크</button><button type="button" data-v="blur">흐린 사진</button></div>
+      <div class="seg" id="f_bgMode"><button type="button" data-v="white" class="on">흰색</button><button type="button" data-v="gray">연그레이</button><button type="button" data-v="dark">차콜</button><button type="button" data-v="pink">핑크</button><button type="button" data-v="blur">흐린<br>사진</button></div>
       <p class="hint">후기 캡처처럼 비율이 안 맞는 사진은 '전체 넣기'로 하면 잘리지 않고, 남는 곳은 고른 배경으로 채워져요</p>
     </div>
     <div class="field"><label>확대 <span id="zoomFor"></span> <b id="zoomPct" style="float:right;color:var(--a)"></b></label><input type="range" id="f_zoom" min="100" max="250" value="100" style="width:100%;padding:0;border:0"><p class="hint">미리보기를 드래그하면 위치를 옮길 수 있어요. 많이 옮기고 싶으면 확대를 키우고, 왼쪽으로 줄이면 사진 전체가 들어가고 사방에 여백도 생겨요</p>
@@ -855,7 +857,7 @@ wireSeg("f_shade", v => { root.classList.remove("shade-soft", "shade-none"); if(
 wireSeg("f_fit", v => { fitMode = v; photos.forEach(fitPhoto); show(cur); });
 wireSeg("f_bgMode", v => {
   bgMode = v;
-  root.classList.remove("bg-white", "bg-dark", "bg-pink");
+  root.classList.remove("bg-white", "bg-gray", "bg-dark", "bg-pink");
   if(v !== "blur") root.classList.add("bg-" + v);
   applyImgTransform();
   /* 위쪽 '후기 배경' 버튼도 같은 색으로 표시 */
