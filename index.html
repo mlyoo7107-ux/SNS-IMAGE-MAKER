@@ -28,7 +28,8 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .topbar .right{display:flex;align-items:center;gap:10px}
 .reset-btn{padding:6px 12px;border:1px solid var(--l);border-radius:16px;background:white;font-size:12px;font-weight:bold;font-family:inherit;color:var(--m);cursor:pointer;white-space:nowrap}
 .reset-btn:hover{border-color:var(--a);color:var(--a)}
-.layout{max-width:1200px;margin:auto;padding:24px 20px 80px;display:grid;grid-template-columns:360px 1fr;gap:28px;align-items:start}
+/* PC: 미리보기 왼쪽, 입력칸 오른쪽 */
+.layout{max-width:1200px;margin:auto;padding:24px 20px 80px;display:grid;grid-template-columns:1fr 360px;gap:28px;align-items:start}
 .panel{background:white;border:1px solid var(--l);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:16px}
 .field label{display:block;font-size:12.5px;font-weight:bold;margin-bottom:6px;color:var(--t)}
 .field label span{font-weight:normal;color:var(--m)}
@@ -65,7 +66,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .go.sub{background:white;color:var(--a);border:1px solid var(--ab);padding:11px;margin-top:-6px}
 .go.sub:hover{background:#fff5fa}
 /* PC: 왼쪽 입력칸을 내려도 오른쪽 미리보기는 화면에 붙어 따라옴 */
-.preview-outer{display:flex;flex-direction:column;align-items:center;gap:8px;position:sticky;top:20px}
+.preview-outer{order:-1;display:flex;flex-direction:column;align-items:center;gap:8px;position:sticky;top:20px}
 .preview-wrap{width:360px;overflow:hidden;position:relative;border-radius:10px;box-shadow:0 4px 20px rgba(23,21,18,.12);background:#fff;cursor:grab;touch-action:none}
 .preview-wrap.dragging{cursor:grabbing}
 .preview-wrap.empty{cursor:pointer;touch-action:auto}
@@ -114,9 +115,9 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
    로고 띠를 아래로 240px 늘려 로고가 보이는 영역 안에 오게, 위쪽 글자도 240px 내림 */
 .reels-safe .p-foot{padding-bottom:252px;align-items:flex-start}
 .reels-safe.pos-top .p-text{top:296px}
-.chk{display:flex!important;gap:6px;align-items:flex-start;font-weight:bold;font-size:12.5px;margin-top:10px;cursor:pointer;line-height:1.45}
-.chk input{width:auto!important;margin-top:2px}
-.chk span{font-weight:normal;color:var(--m);font-size:11px}
+.chk:not([hidden]){display:flex!important;flex-wrap:wrap;gap:4px 6px;align-items:center;font-weight:bold;font-size:12.5px;margin-top:10px;cursor:pointer;line-height:1.45}
+.chk input{width:auto!important;margin:0}
+.chk span{flex-basis:100%;font-weight:normal;color:var(--m);font-size:11px}
 .feed-guide{position:absolute;left:0;right:0;border-top:2px dashed rgba(255,45,134,.9);border-bottom:2px dashed rgba(255,45,134,.9);pointer-events:none;z-index:4;box-shadow:0 0 0 9999px rgba(255,255,255,.28)}
 .feed-guide span{position:absolute;right:6px;top:4px;background:rgba(255,45,134,.9);color:#fff;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:8px}
 .preview-wrap .feed-guide{clip-path:inset(-9999px 0)}
@@ -233,7 +234,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
       </div>
     </div>
     <div class="field"><label>비율</label><select id="f_ratio"></select><p class="hint">사진에 맞춰 자동으로 추천해요. 여러 장은 모두 같은 비율로 만들어져요</p>
-      <label class="chk" id="reelsSafeRow" hidden><input type="checkbox" id="f_reelsSafe" checked> 피드 격자에 맞추기 <span>— 피드에선 위아래가 잘려서, 제목·로고를 점선 안(피드에 보이는 영역)으로 옮겨요</span></label>
+      <label class="chk" id="reelsSafeRow" hidden><input type="checkbox" id="f_reelsSafe" checked> 피드 격자에 맞추기 <span>피드에선 위아래가 잘려서, 제목·로고를 점선 안(피드에 보이는 영역)으로 옮겨요</span></label>
     </div>
     <div class="field">
       <label>사진 맞춤</label>
