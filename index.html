@@ -222,7 +222,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
     <div class="field">
       <button type="button" class="pick" id="pickBtn">📷 사진 선택하기 (여러 장 가능)</button>
       <input type="file" id="fileInput" accept="image/*,video/*" multiple hidden>
-      <p class="hint" style="text-align:center" id="pickHint">최대 10장 · 영상을 고르면 표지로 쓸 장면을 고를 수 있어요</p>
+      <p class="hint" style="text-align:center" id="pickHint">최대 20장 ·영상을 고르면 표지로 쓸 장면을 고를 수 있어요</p>
       <div class="strip" id="strip"></div>
       <div class="order" id="orderRow" hidden><button type="button" id="mvLeft">◀ 앞으로</button><button type="button" id="mvRight">뒤로 ▶</button></div>
       <p class="hint" id="orderHint" hidden>사진을 끌어서 순서를 바꿀 수 있어요 (폰은 길게 누른 뒤 끌기)</p>
@@ -337,7 +337,7 @@ const RATIOS = {
 };
 $("f_ratio").innerHTML = Object.keys(RATIOS).map(k => `<option value="${k}">${RATIOS[k].label}</option>`).join("");
 
-const MAX_PHOTOS = 10; // 인스타그램 여러 장 게시물 기준
+const MAX_PHOTOS = 20; // 인스타그램 여러 장 게시물 최대 장수
 /* 사진마다 위치·확대를 따로 기억 — {url, name, naturalW, naturalH, baseW, baseH, zoom, panX, panY} */
 let photos = [];
 let cur = -1;
