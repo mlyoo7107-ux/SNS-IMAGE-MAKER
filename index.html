@@ -225,7 +225,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
       <label>얼굴 가리기 <span id="blurFor"></span></label>
       <button type="button" class="blur-btn" id="blurBtn">🙈 얼굴 가리기</button>
       <div id="blurOpts" hidden>
-        <p class="hint" style="margin:6px 0 8px">미리보기에서 <b>가릴 곳을 누르거나 드래그</b>하세요. 가리개를 끌면 옮겨지고, 오른쪽 아래 점으로 크기를 바꿔요</p>
+        <p class="hint" style="margin:6px 0 8px">미리보기에서 <b>가릴 곳을 누르거나 드래그</b>하세요. 가리개를 끌면 옮겨지고, 오른쪽 아래 점으로 크기를 바꿔요.<br>가리개는 <b>놓는 즉시 적용</b>되고, 다른 사진으로 넘어가도 끌 때까지 계속 켜져 있어요</p>
         <div class="seg" id="f_blurType"><button type="button" data-v="blur" class="on">블러</button><button type="button" data-v="mosaic">모자이크</button></div>
         <div class="seg" id="f_blurShape" style="margin-top:6px"><button type="button" data-v="ellipse" class="on">⚪ 원형</button><button type="button" data-v="rect">⬜ 네모</button></div>
         <label style="margin-top:10px;font-weight:normal;font-size:12px;color:var(--m)">강도 <b id="blurLevelOut" style="color:var(--a)">5</b></label>
@@ -276,7 +276,7 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
         <div class="p-foot" id="o_foot"><img src="logo-colorm.png" alt="COLOR.M"><div class="r" id="o_footText"></div></div>
       </div>
     </div>
-    <button type="button" class="blur-done" id="blurDone" hidden>✓ 가리기 완료</button>
+    <button type="button" class="blur-done" id="blurDone" hidden>얼굴 가리기 끄기</button>
     <div class="pv-nav" id="pvNav" hidden><button type="button" id="pvPrev" aria-label="이전 사진">◀</button><span id="pvCount"></span><button type="button" id="pvNext" aria-label="다음 사진">▶</button></div>
   </div>
 </div>
@@ -854,7 +854,7 @@ function setBlurMode(on){
   blurMode = on;
   selBox = -1;
   $("blurBtn").classList.toggle("on", on);
-  $("blurBtn").textContent = on ? "✓ 가리기 완료" : "🙈 얼굴 가리기";
+  $("blurBtn").textContent = on ? "🙈 얼굴 가리기 켜짐 (누르면 끄기)" : "🙈 얼굴 가리기";
   $("blurOpts").hidden = !on;
   $("blurDone").hidden = !on;
   $("blurLayer").hidden = !on;
@@ -1060,9 +1060,11 @@ function recommendRatio(p){
 let cropEd = null; // {p, o, rect:{x,y,w,h}, aspect}
 function openCrop(){
   const p = P(); if(!p) return;
+  /* 자르는 동안만 얼굴 가리기를 잠깐 끄고, 닫으면 다시 켬 */
+  const wasBlur = blurMode;
   if(blurMode) setBlurMode(false);
   const o = p.orig || {el:p.el, url:p.srcUrl, w:p.naturalW, h:p.naturalH};
-  cropEd = {p, o, rect:{...(p.crop || {x:0, y:0, w:1, h:1})}, aspect:"free"};
+  cropEd = {p, o, rect:{...(p.crop || {x:0, y:0, w:1, h:1})}, aspect:"free", wasBlur};
   $("f_cropAspect").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === "free"));
   $("cropFrameBtn").textContent = `틀 비율(${$("f_ratio").value})에 맞추기`;
   $("cropOv").hidden = false;
@@ -1075,7 +1077,9 @@ function openCrop(){
 function closeCrop(){
   $("cropOv").hidden = true;
   document.body.style.overflow = "";
+  const wasBlur = cropEd && cropEd.wasBlur;
   cropEd = null;
+  if(wasBlur) setBlurMode(true);
 }
 function drawCrop(){
   if(!cropEd) return;
