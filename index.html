@@ -253,7 +253,9 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
       <div class="seg" id="f_bgMode"><button type="button" data-v="white" class="on">흰색</button><button type="button" data-v="dark">차콜</button><button type="button" data-v="pink">핑크</button><button type="button" data-v="blur">흐린 사진</button></div>
       <p class="hint">후기 캡처처럼 비율이 안 맞는 사진은 '전체 넣기'로 하면 잘리지 않고, 남는 곳은 고른 배경으로 채워져요</p>
     </div>
-    <div class="field"><label>확대 <span id="zoomFor"></span></label><input type="range" id="f_zoom" min="100" max="250" value="100" style="width:100%;padding:0;border:0"><p class="hint">미리보기를 드래그하면 위치를 옮길 수 있어요. 많이 옮기고 싶으면 확대를 키우고, 왼쪽으로 줄이면 사진 전체가 들어가고 사방에 여백도 생겨요</p></div>
+    <div class="field"><label>확대 <span id="zoomFor"></span> <b id="zoomPct" style="float:right;color:var(--a)"></b></label><input type="range" id="f_zoom" min="100" max="250" value="100" style="width:100%;padding:0;border:0"><p class="hint">미리보기를 드래그하면 위치를 옮길 수 있어요. 많이 옮기고 싶으면 확대를 키우고, 왼쪽으로 줄이면 사진 전체가 들어가고 사방에 여백도 생겨요</p>
+      <button type="button" class="blur-btn" id="zoomAll" style="margin-top:8px" hidden>📐 이 확대·위치를 모든 사진에 적용</button>
+    </div>
     <div class="field" id="textOnField" hidden><label>사진별 글자</label><div class="seg" id="f_textOn"><button type="button" data-v="all" class="on">모두 같게</button><button type="button" data-v="first">첫 장만</button><button type="button" data-v="each">장마다 다르게</button></div><p class="hint">'장마다 다르게'는 위에서 사진을 고른 뒤 그 사진의 제목을 고쳐요. 제목을 비우면 그 사진엔 로고만 들어가요</p></div>
     <div class="field"><label>제목 <span id="titleFor"></span></label><textarea id="f_title" rows="2" placeholder="이미지에 넣을 제목을 입력하세요"></textarea><p class="hint">줄을 바꾸면 이미지에서도 줄이 바뀌어요</p></div>
     <div class="field"><label>작은 글씨 <span id="subFor">(선택)</span></label><input id="f_sub" placeholder="예: 2026 가을 컬러 수업 · 3학년 2반"></div>
@@ -442,12 +444,16 @@ const CONTAIN_FIT = 0.92; // '전체 넣기'는 사방에 살짝 흰 여백이 �
 
 /* 사진 위치를 제한하고 img에 적용 — 미리보기와 저장용 복제본 모두 이걸로 그림.
    사진이 칸보다 크면 빈 곳이 안 생기게, 작으면 칸 안에서 자유롭게 */
-function placeImg(img, p){
+function clampPan(p){
   const box = photoBox();
   const effW = p.baseW * p.zoom, effH = p.baseH * p.zoom;
   const maxX = Math.abs(effW - box.w) / 2, maxY = Math.abs(effH - box.h) / 2;
   p.panX = Math.max(-maxX, Math.min(maxX, p.panX));
   p.panY = Math.max(-maxY, Math.min(maxY, p.panY));
+  return {box, effW, effH};
+}
+function placeImg(img, p){
+  const {box, effW, effH} = clampPan(p);
   img.style.width = effW + "px";
   img.style.height = effH + "px";
   img.style.transform = `translate(-50%,-50%) translate(${p.panX}px, ${p.panY}px)`;
@@ -480,7 +486,10 @@ function makeBg(el){
   g.fillRect(0, 0, c.width, c.height);
   return c.toDataURL("image/jpeg", 0.85);
 }
-function applyImgTransform(){ if(P()) placeImg($("o_img"), P()); renderBoxes(); }
+function applyImgTransform(){
+  if(P()){ placeImg($("o_img"), P()); $("zoomPct").textContent = Math.round(P().zoom * 100) + "%"; }
+  renderBoxes();
+}
 
 /* 제목·작은 글씨: "모두 같게"·"첫 장만"이면 shared, "장마다 다르게"면 사진마다 p.title·p.sub */
 const shared = {title:"", sub:""};
@@ -534,6 +543,8 @@ function renderStrip(){
   $("pvNext").disabled = cur >= n - 1;
   $("textOnField").hidden = n < 2;
   $("zoomFor").textContent = n > 1 ? `(${cur + 1}번 사진)` : "";
+  $("zoomAll").hidden = n < 2;
+  if(!n) $("zoomPct").textContent = "";
   $("pickBtn").textContent = n ? `＋ 사진 추가 (${n}/${MAX_PHOTOS})` : "📷 사진 선택하기 (여러 장 가능)";
   $("pickBtn").disabled = n >= MAX_PHOTOS;
   $("downloadBtn").disabled = !n;
@@ -783,6 +794,19 @@ $("f_foot").addEventListener("input", syncText);
 $("f_ratio").addEventListener("change", () => { ratioManuallySet = true; applyRatio(); photos.forEach(fitPhoto); show(cur); });
 $("f_reelsSafe").addEventListener("change", () => { applyRatio(); photos.forEach(fitPhoto); show(cur); });
 $("f_zoom").addEventListener("input", e => { if(!P()) return; P().zoom = Number(e.target.value)/100; P().manual = true; applyImgTransform(); });
+/* 지금 사진의 확대·위치를 다른 사진에 똑같이 — 같은 크기로 찍은 사진 여러 장을 한 번에 맞출 때 */
+$("zoomAll").onclick = () => {
+  const p = P(); if(!p) return;
+  photos.forEach(q => {
+    if(q === p) return;
+    q.zoom = Math.max(zoomFloor(q), p.zoom);
+    q.panX = p.panX; q.panY = p.panY;
+    q.manual = true;
+    clampPan(q); // 사진마다 넘치지 않게 위치만 맞춰둠
+  });
+  clearPending();
+  toast(`${photos.length}장 모두 ${Math.round(p.zoom * 100)}%로 맞췄어요`);
+};
 function wireSeg(id, onPick){
   $(id).addEventListener("click", e => {
     const b = e.target.closest("button"); if(!b) return;
