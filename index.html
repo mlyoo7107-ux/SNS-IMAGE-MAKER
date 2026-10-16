@@ -138,6 +138,35 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
 .p-foot img{height:calc(72px*var(--k,1));margin:calc(-12px*var(--k,1)) 0;width:auto;display:block}
 .p-foot .r{font-size:calc(20px*var(--k,1));color:var(--m);font-weight:600;text-align:right}
 .p-foot.solo{justify-content:center}
+/* 왼쪽 위 COLOR.M 표시 (갤러리 SNS 이미지와 같은 모양) */
+.p-brand{position:absolute;top:calc(56px*var(--k,1));left:calc(72px*var(--k,1));display:flex;align-items:center;gap:calc(14px*var(--k,1));z-index:2}
+.p-brand .bar{width:calc(5px*var(--k,1));height:calc(46px*var(--k,1));background:#fff;border-radius:calc(2px*var(--k,1));flex:none}
+.p-brand .names b{display:block;font-size:calc(25px*var(--k,1));font-weight:900;color:#fff;line-height:1.2;text-shadow:0 calc(2px*var(--k,1)) calc(10px*var(--k,1)) rgba(0,0,0,.35)}
+.p-brand .names small{display:block;font-size:calc(14px*var(--k,1));letter-spacing:calc(3px*var(--k,1));color:#fff;opacity:.9;font-weight:bold}
+.p-brand .names em{display:block;font-style:normal;font-size:calc(11px*var(--k,1));letter-spacing:calc(1.5px*var(--k,1));color:#fff;opacity:.72;font-weight:600;margin-top:calc(4px*var(--k,1));text-shadow:0 calc(2px*var(--k,1)) calc(8px*var(--k,1)) rgba(0,0,0,.35)}
+/* 검정·분홍 글자(밝은 배경)일 땐 왼쪽 위 표시도 어둡게 */
+.tc-dark .p-brand .bar,.tc-pink .p-brand .bar{background:#171512}
+.tc-dark .p-brand .names *,.tc-pink .p-brand .names *{color:#171512;text-shadow:none}
+.reels-safe .p-brand{top:296px}
+/* 왼쪽 위 흰 글씨가 밝은 사진에서도 읽히게 위쪽에 옅은 그늘.
+   html2canvas가 덮개 아래 끝에 검은 줄을 그려서, 사진 밖까지 늘려 그 줄을 잘라내고 아래쪽은 투명 */
+.p-topshade{position:absolute;left:0;right:0;top:0;height:calc(100% + 6px);pointer-events:none;display:none;
+  background:linear-gradient(to top,rgba(0,0,0,0) 0%,rgba(0,0,0,0) 76%,rgba(0,0,0,.2) 90%,rgba(0,0,0,.42) 100%)}
+.has-brand .p-topshade{display:block}
+.tc-dark .p-topshade,.tc-pink .p-topshade,.has-brand.pos-top .p-topshade{display:none}
+/* 글자를 위에 둘 때 왼쪽 위 표시와 안 겹치게 아래로 */
+.has-brand.pos-top .p-text{top:calc(170px*var(--k,1))}
+.reels-safe.has-brand.pos-top .p-text{top:410px}
+/* 메이커 갤러리 레이아웃: 하단 왼쪽 "Made with 메이커", 오른쪽 "COLOR.M MAKER GALLERY ●M" */
+.p-foot .g-l,.p-foot .g-r{display:none}
+.lay-gallery .p-foot{padding-top:calc(30px*var(--k,1));padding-bottom:calc(30px*var(--k,1));justify-content:space-between!important}
+.lay-gallery .p-foot img,.lay-gallery .p-foot .r{display:none!important}
+.lay-gallery .p-foot .g-l{display:block;font-size:calc(17px*var(--k,1));color:#7a7268}
+.lay-gallery .p-foot .g-l b{color:#ff2d86}
+.lay-gallery .p-foot .g-r{display:flex;align-items:center;gap:calc(14px*var(--k,1))}
+.lay-gallery .p-foot .g-r b{font-size:calc(17px*var(--k,1));color:#ff2d86}
+.lay-gallery .p-foot .circle{width:calc(34px*var(--k,1));height:calc(34px*var(--k,1));border-radius:50%;background:#ff2d86;color:#fff;display:flex;align-items:center;justify-content:center;font-size:calc(16px*var(--k,1));font-weight:900}
+.lay-gallery.reels-safe .p-foot{padding-bottom:270px}
 
 /* 피드 미리보기 */
 .feed-ov{position:fixed;inset:0;z-index:150;background:rgba(20,20,24,.92);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -272,7 +301,19 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
       <p class="hint">밝은 사진·후기 캡처엔 '검정 + 그늘 없음'이 잘 어울려요</p>
     </div>
     <div class="field"><label>글자 크기</label><div class="seg" id="f_size"><button type="button" data-v="0.8">작게</button><button type="button" data-v="1" class="on">보통</button><button type="button" data-v="1.25">크게</button></div></div>
-    <div class="field"><label>하단 오른쪽 문구 <span>(선택)</span></label><input id="f_foot" placeholder="예: 홈페이지 주소나 SNS 계정"><p class="hint">비워두면 COLOR.M 로고만 가운데에 들어가요</p></div>
+    <div class="field">
+      <label>레이아웃</label>
+      <div class="seg" id="f_layout"><button type="button" data-v="basic" class="on">COLOR.M 로고</button><button type="button" data-v="gallery">메이커 갤러리</button></div>
+      <p class="hint">'메이커 갤러리'는 갤러리 SNS 이미지와 같은 모양이에요 (하단에 메이커 이름 · COLOR.M MAKER GALLERY)</p>
+      <div id="galleryOpts" hidden>
+        <label style="margin-top:10px">메이커 이름</label>
+        <select id="f_maker"><option>Character Maker</option><option>Product Prompt Maker</option><option>Picture Book Maker</option><option value="custom">직접 입력</option></select>
+        <input id="f_makerCustom" placeholder="메이커 이름을 입력하세요" style="margin-top:6px" hidden>
+      </div>
+      <label class="chk"><input type="checkbox" id="f_brand"> 왼쪽 위 COLOR.M 표시</label>
+      <label class="chk"><input type="checkbox" id="f_aiMark"> 'AI-GENERATED IMAGE' 표시 <span>AI로 만든 이미지라면 켜 두는 걸 권해요 (왼쪽 위 표시 아래에 들어가요)</span></label>
+    </div>
+    <div class="field" id="footField"><label>하단 오른쪽 문구 <span>(선택)</span></label><input id="f_foot" placeholder="예: 홈페이지 주소나 SNS 계정"><p class="hint">비워두면 COLOR.M 로고만 가운데에 들어가요</p></div>
     <button class="go" id="downloadBtn" disabled>⬇️ PNG로 저장</button>
     <button class="go sub" id="saveOneBtn" hidden>이 사진만 저장</button>
     <button class="go sub" id="feedBtn" hidden>📱 피드 미리보기</button>
@@ -289,9 +330,11 @@ body{margin:0;background:var(--b);font-family:Arial,"Noto Sans KR",sans-serif;co
           <img id="o_img" class="p-main" alt="" hidden>
           <div class="p-empty" id="o_empty"><b>📷</b>여기를 눌러 사진을 선택하세요</div>
           <div class="p-scrim" id="o_scrim"></div>
+          <div class="p-topshade"></div>
+          <div class="p-brand" id="o_brand" hidden><div class="bar"></div><div class="names"><b>COLOR.M</b><small id="o_brandSub">AI MAKER GALLERY</small><em id="o_brandAi">AI-GENERATED IMAGE</em></div></div>
           <div class="p-text"><div class="p-title" id="o_title"></div><div class="p-sub" id="o_sub"></div></div>
         </div>
-        <div class="p-foot" id="o_foot"><img src="logo-colorm.png" alt="COLOR.M"><div class="r" id="o_footText"></div></div>
+        <div class="p-foot" id="o_foot"><img src="logo-colorm.png" alt="COLOR.M"><div class="r" id="o_footText"></div><div class="g-l">Made with <b id="o_maker">Character Maker</b></div><div class="g-r"><b>COLOR.M MAKER GALLERY</b><span class="circle">M</span></div></div>
       </div>
     </div>
     <button type="button" class="blur-done" id="blurDone" hidden>얼굴 가리기 끄기</button>
@@ -1399,7 +1442,9 @@ async function collectWork(){
       fit:segVal("f_fit"), bg:segVal("f_bgMode"), textColor:segVal("f_textColor"), shade:segVal("f_shade"),
       pos:segVal("f_pos"), align:segVal("f_align"), size:segVal("f_size"), textOn:segVal("f_textOn"),
       shared:{...shared}, foot:$("f_foot").value,
-      blurType:segVal("f_blurType"), blurShape:segVal("f_blurShape"), blurLevel
+      blurType:segVal("f_blurType"), blurShape:segVal("f_blurShape"), blurLevel,
+      layout:segVal("f_layout"), maker:$("f_maker").value, makerCustom:$("f_makerCustom").value,
+      brand:$("f_brand").checked, aiMark:$("f_aiMark").checked
     },
     photos:await Promise.all(photos.map(async p => ({
       name:p.name, blob:await originalBlob(p), crop:p.crop || null, blurs:p.blurs,
@@ -1431,6 +1476,10 @@ async function restoreWork(w){
     root.className = [`pos-${s.pos}`, `align-${s.align}`, s.bg !== "blur" ? `bg-${s.bg}` : "", s.textColor !== "white" ? `tc-${s.textColor}` : "", s.shade !== "strong" ? `shade-${s.shade}` : ""].filter(Boolean).join(" ");
     shared.title = s.shared.title || ""; shared.sub = s.shared.sub || "";
     $("f_foot").value = s.foot || "";
+    setSegUI("f_layout", s.layout || "basic");
+    $("f_maker").value = s.maker || "Character Maker"; $("f_makerCustom").value = s.makerCustom || "";
+    $("f_brand").checked = !!s.brand; $("f_aiMark").checked = !!s.aiMark;
+    applyLayout();
     applyRatio();
     /* 사진: 원본을 불러와 자르기를 다시 하고, 가리기·위치·제목을 되돌림 */
     for(const sp of w.photos){
@@ -1532,6 +1581,31 @@ function scheduleAutosave(){
   };
   $("resumeNo").onclick = () => { $("resumeBox").hidden = true; idbDel(); };
 })();
+
+/* ---------- 레이아웃: COLOR.M 로고 / 메이커 갤러리 + 왼쪽 위 COLOR.M·AI 표시 ---------- */
+function applyLayout(){
+  const gallery = segVal("f_layout") === "gallery";
+  root.classList.toggle("lay-gallery", gallery);
+  $("galleryOpts").hidden = !gallery;
+  $("footField").hidden = gallery; // 갤러리 하단은 정해진 문구라 '하단 오른쪽 문구'는 안 씀
+  const custom = $("f_maker").value === "custom";
+  $("f_makerCustom").hidden = !custom;
+  $("o_maker").textContent = custom ? ($("f_makerCustom").value.trim() || "Maker") : $("f_maker").value;
+  const brand = $("f_brand").checked;
+  $("o_brand").hidden = !brand;
+  root.classList.toggle("has-brand", brand);
+  $("o_brandSub").hidden = !gallery; // 'AI MAKER GALLERY'는 갤러리 레이아웃에서만
+  $("o_brandAi").hidden = !$("f_aiMark").checked;
+}
+wireSeg("f_layout", v => {
+  if(v === "gallery"){ $("f_brand").checked = true; $("f_aiMark").checked = true; }
+  applyLayout();
+  photos.forEach(fitPhoto); show(cur); // 하단 띠 높이가 바뀌니 사진 다시 맞춤
+});
+$("f_maker").addEventListener("change", applyLayout);
+$("f_makerCustom").addEventListener("input", applyLayout);
+$("f_brand").addEventListener("change", () => { if(!$("f_brand").checked) $("f_aiMark").checked = false; applyLayout(); autoRefit(); });
+$("f_aiMark").addEventListener("change", () => { if($("f_aiMark").checked) $("f_brand").checked = true; applyLayout(); autoRefit(); });
 
 /* 새로 시작 — 사진·글자·설정을 모두 지우고 처음 화면으로 (페이지를 다시 불러오는 게 가장 깔끔) */
 $("resetBtn").onclick = () => {
@@ -1680,6 +1754,8 @@ $("feedPosted").onclick = () => {
 $("f_ratio").value = "4:5";
 $("f_zoom").value = 100;
 $("f_blurLevel").value = 5;
+$("f_brand").checked = false; $("f_aiMark").checked = false; $("f_maker").value = "Character Maker"; $("f_makerCustom").value = "";
+applyLayout();
 syncText();
 applyRatio();
 renderStrip();
