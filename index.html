@@ -172,6 +172,9 @@ html,button,select,label{touch-action:manipulation}
 .lay-gallery .p-foot .circle{width:calc(34px*var(--k,1));height:calc(34px*var(--k,1));border-radius:50%;background:#ff2d86;color:#fff;display:flex;align-items:center;justify-content:center;font-size:calc(16px*var(--k,1));font-weight:900}
 .lay-gallery.reels-safe .p-foot{padding-bottom:270px}
 /* 매거진 레이아웃: 베이지 바탕에 사진을 둥근 틀로 넣고, 아래에 라벨 · 명조 제목 · 작은 글씨 (카드 만들기와 같은 톤) */
+.adj-grid{display:grid;grid-template-columns:44px 1fr 30px;align-items:center;gap:4px 8px;font-size:12.5px;margin-bottom:6px}
+.adj-grid input{width:100%;padding:0;border:0}
+.adj-grid b{color:var(--a);text-align:right;font-size:12px}
 .p-mag{display:none}
 #posterRoot.lay-mag{background:#f6f1ec}
 .lay-mag .p-photo{flex:none;height:var(--mag-ph,800px);margin:calc(56px*var(--k,1)) calc(56px*var(--k,1)) 0;border-radius:calc(18px*var(--k,1));background:#ebe4dd}
@@ -347,6 +350,17 @@ html,button,select,label{touch-action:manipulation}
       <label>사진 자르기 <span id="cropFor"></span></label>
       <button type="button" class="blur-btn" id="cropBtn">✂️ 사진 자르기</button>
       <p class="hint">캡처 화면의 위아래처럼 필요 없는 부분을 잘라낼 수 있어요</p>
+    </div>
+    <div class="field" id="adjField" hidden>
+      <label>밝기 · 색 보정 <span id="adjFor"></span></label>
+      <div class="adj-grid">
+        <span>밝기</span><input type="range" id="adj_bri" min="-50" max="50" value="0"><b id="adj_briOut">0</b>
+        <span>대비</span><input type="range" id="adj_con" min="-50" max="50" value="0"><b id="adj_conOut">0</b>
+        <span>채도</span><input type="range" id="adj_sat" min="-50" max="50" value="0"><b id="adj_satOut">0</b>
+        <span>색온도</span><input type="range" id="adj_warm" min="-50" max="50" value="0"><b id="adj_warmOut">0</b>
+      </div>
+      <div class="order"><button type="button" id="adjReset">↺ 원래대로</button><button type="button" id="adjAll" hidden>이 보정을 모든 사진에</button></div>
+      <p class="hint">색온도는 왼쪽이 푸르게(차갑게), 오른쪽이 노랗게(따뜻하게)예요. 피드 색감을 맞출 때 살짝만 움직여 보세요</p>
     </div>
     <div class="field" id="blurField" hidden>
       <label>얼굴 가리기 <span id="blurFor"></span></label>
@@ -798,6 +812,10 @@ function renderStrip(){
   const isCard = !!P()?.card;
   $("blurField").hidden = !n || isCard;
   $("cropField").hidden = !n || isCard;
+  $("adjField").hidden = !n || isCard;
+  $("adjFor").textContent = n > 1 ? `(${cur + 1}번 사진)` : "";
+  $("adjAll").hidden = n < 2;
+  loadAdjInputs();
   $("cardEditBtn").hidden = !isCard;
   $("cardNewBtn").disabled = n >= MAX_PHOTOS;
   $("cropFor").textContent = n > 1 ? `(${cur + 1}번 사진)` : "";
@@ -1171,13 +1189,14 @@ function rebuild(p){
 }
 async function bake(p){
   let url = p.srcUrl;
-  if(p.blurs.length){
+  if(p.blurs.length || hasAdj(p)){
     const s = Math.min(1, MAX_SIDE / Math.max(p.naturalW, p.naturalH));
     const W = Math.round(p.naturalW * s), H = Math.round(p.naturalH * s);
     const c = document.createElement("canvas"); c.width = W; c.height = H;
     const g = c.getContext("2d");
     g.drawImage(p.el, 0, 0, W, H);
     for(const b of p.blurs) coverArea(g, c, p.el, Math.round(b.x * W), Math.round(b.y * H), Math.max(2, Math.round(b.w * W)), Math.max(2, Math.round(b.h * H)), W, H);
+    if(hasAdj(p)) applyAdj(g, W, H, p.adj);
     const blob = await new Promise(res => c.toBlob(res, "image/jpeg", 0.95));
     url = URL.createObjectURL(blob);
   }
@@ -1188,6 +1207,39 @@ async function bake(p){
   const th = $("strip").querySelector(`.th[data-i="${photos.indexOf(p)}"] img`);
   if(th) th.src = url;
 }
+/* ---------- 밝기 · 색 보정 ----------
+   저장 도구(html2canvas)가 CSS filter를 못 그리고 일부 아이폰은 캔버스 filter도 안 돼서, 픽셀을 직접 고침.
+   p.adj = {bri, con, sat, warm} 각각 -50 ~ 50 */
+const ADJ_KEYS = ["bri", "con", "sat", "warm"];
+const hasAdj = p => !!p.adj && ADJ_KEYS.some(k => p.adj[k]);
+function applyAdj(g, W, H, a){
+  const img = g.getImageData(0, 0, W, H), d = img.data;
+  const bri = (a.bri || 0) * 1.6, con = 1 + (a.con || 0) / 100, sat = 1 + (a.sat || 0) / 50, warm = (a.warm || 0) * 0.5;
+  /* 0~255 결과를 미리 표로 만들어 빠르게 (밝기·대비) */
+  const lut = new Uint8ClampedArray(256);
+  for(let v = 0; v < 256; v++) lut[v] = (v - 128) * con + 128 + bri;
+  for(let i = 0; i < d.length; i += 4){
+    let r = lut[d[i]], gg = lut[d[i + 1]], b = lut[d[i + 2]];
+    if(sat !== 1){ const L = 0.299 * r + 0.587 * gg + 0.114 * b; r = L + (r - L) * sat; gg = L + (gg - L) * sat; b = L + (b - L) * sat; }
+    if(warm){ r += warm; gg += warm * 0.25; b -= warm; }
+    d[i] = r; d[i + 1] = gg; d[i + 2] = b;
+  }
+  g.putImageData(img, 0, 0);
+}
+function loadAdjInputs(){
+  const a = P()?.adj || {};
+  for(const k of ADJ_KEYS){ $("adj_" + k).value = a[k] || 0; $("adj_" + k + "Out").textContent = a[k] || 0; }
+}
+let adjTimer = 0;
+ADJ_KEYS.forEach(k => $("adj_" + k).addEventListener("input", () => {
+  const p = P(); if(!p || p.card) return;
+  p.adj = Object.assign({}, p.adj, {[k]: Number($("adj_" + k).value)});
+  $("adj_" + k + "Out").textContent = p.adj[k];
+  clearTimeout(adjTimer); adjTimer = setTimeout(() => rebuild(p), 120); // 끄는 동안은 너무 자주 다시 그리지 않게
+}));
+$("adjReset").onclick = () => { const p = P(); if(!p) return; p.adj = null; loadAdjInputs(); rebuild(p); };
+$("adjAll").onclick = () => { const a = P()?.adj; photos.forEach(p => { if(p !== P() && !p.card){ p.adj = a ? {...a} : null; rebuild(p); } }); };
+
 /* 캔버스 블러(filter)는 일부 아이폰에서 안 돼서, 없으면 줄였다 키우는 방식으로 흐리게 */
 const CAN_FILTER = (() => { try{ const g = document.createElement("canvas").getContext("2d"); g.filter = "blur(2px)"; return g.filter === "blur(2px)"; }catch(e){ return false; } })();
 function coverArea(g, c, src, x, y, w, h, W, H){
@@ -1478,7 +1530,7 @@ $("cropApply").onclick = async () => {
   /* 사진이 1장이면 자른 모양에 맞춰 비율을 다시 추천 */
   if(photos.length === 1 && !ratioManuallySet){ recommendRatio(p); applyRatio(); }
   fitPhoto(p);
-  if(p.blurs.length) rebuild(p);
+  if(p.blurs.length || hasAdj(p)) rebuild(p);
   clearPending();
   show(cur);
 };
@@ -1633,7 +1685,7 @@ async function collectWork(){
       brand:$("f_brand").checked, aiMark:$("f_aiMark").checked
     },
     photos:await Promise.all(photos.map(async p => ({
-      name:p.name, blob:await originalBlob(p), crop:p.crop || null, blurs:p.blurs, card:p.card || null,
+      name:p.name, blob:await originalBlob(p), crop:p.crop || null, blurs:p.blurs, adj:p.adj || null, card:p.card || null,
       zoom:p.zoom, panX:p.panX, panY:p.panY, manual:!!p.manual, title:p.title, sub:p.sub,
       titleEdited:!!p.titleEdited, subEdited:!!p.subEdited
     })))
@@ -1679,6 +1731,7 @@ async function restoreWork(w){
         Object.assign(p, {orig:o, crop:sp.crop, el:c.el, srcUrl:c.url, url:c.url, naturalW:c.nw, naturalH:c.nh, bgUrl:makeBg(c.el)});
       }
       p.blurs = sp.blurs || [];
+      p.adj = sp.adj || null;
       if(sp.card) p.card = sp.card;
       p.title = sp.title; p.sub = sp.sub; p.titleEdited = !!sp.titleEdited; p.subEdited = !!sp.subEdited;
       photos.push(p);
@@ -1687,7 +1740,7 @@ async function restoreWork(w){
       const sp = w.photos[i];
       fitPhoto(p);
       Object.assign(p, {zoom:sp.zoom, panX:sp.panX, panY:sp.panY, manual:sp.manual});
-      if(p.blurs.length) rebuild(p);
+      if(p.blurs.length || hasAdj(p)) rebuild(p);
     });
     show(photos.length ? Math.min(Math.max(w.cur || 0, 0), photos.length - 1) : -1);
   }finally{ restoring = false; }
