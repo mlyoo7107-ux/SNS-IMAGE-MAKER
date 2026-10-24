@@ -211,6 +211,13 @@ html,button,select,label{touch-action:manipulation}
 .color-row input[type=text]{flex:1}
 .color-row .hexin{flex:0 0 92px!important;font-family:monospace;text-transform:uppercase}
 .color-row button{flex:none;width:32px;height:32px;border:0;border-radius:50%;background:#f2f2f5;color:var(--m);font-size:15px;cursor:pointer}
+.color-row button.picked{background:#fff0f6;box-shadow:inset 0 0 0 1.5px var(--a)}
+.pick-stage{position:relative;display:flex;justify-content:center;background:#f2f2f5;border-radius:12px;min-height:120px;align-items:center;overflow:hidden}
+.pick-stage canvas{display:block;max-width:100%;max-height:52vh;cursor:crosshair;touch-action:manipulation}
+.pick-dot{position:absolute;width:22px;height:22px;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 1.5px rgba(0,0,0,.5);transform:translate(-50%,-50%);pointer-events:none}
+.pick-result{display:flex;align-items:center;gap:12px}
+.pick-sw{width:44px;height:44px;border-radius:10px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+.pick-result img{height:70px;border-radius:10px;margin-left:auto}
 .card-foot{padding:12px 16px 16px;display:flex;gap:8px;border-top:1px solid var(--l)}
 .card-foot button{flex:1}
 /* 카드 이미지 (1080px 기준으로 그림) */
@@ -439,6 +446,23 @@ html,button,select,label{touch-action:manipulation}
       </div>
     </div>
     <div class="card-foot"><button type="button" class="go sub" id="cardCancel" style="margin:0">취소</button><button type="button" class="go" id="cardSave">✓ 카드 넣기</button></div>
+  </div>
+</div>
+<div class="feed-ov" id="pickOv" hidden style="z-index:170">
+  <div class="feed-card card-ed">
+    <div class="feed-head"><b>🎯 사진에서 색 따기</b><button type="button" id="pickClose" aria-label="닫기">✕</button></div>
+    <div class="card-body">
+      <button type="button" class="pick" id="pickImgBtn" style="padding:11px">📷 발색 사진 고르기</button>
+      <input type="file" id="pickFile" accept="image/*" hidden>
+      <p class="hint" style="font-size:11.5px;color:var(--m);margin:0;text-align:center">제품 발색 사진이나 캡처를 넣고 <b>입술(발색) 부분을 누르세요</b> · Ctrl+V로 붙여넣어도 돼요<br>빛 반사가 없는 가운데 부분을 누르면 더 정확해요</p>
+      <div class="pick-stage" id="pickStage"><canvas id="pickCanvas"></canvas><div class="pick-dot" id="pickDot" hidden></div></div>
+      <div class="pick-result" id="pickResult" hidden>
+        <div class="pick-sw" id="pickSw"></div>
+        <div><b id="pickHex">#000000</b><div class="hint" style="font-size:11px;color:var(--m)">이 색으로 칠한 입술 →</div></div>
+        <img id="pickLip" alt="">
+      </div>
+    </div>
+    <div class="card-foot"><button type="button" class="go sub" id="pickCancel" style="margin:0">취소</button><button type="button" class="go" id="pickApply" disabled>✓ 이 색 쓰기</button></div>
   </div>
 </div>
 <div class="feed-ov" id="feedOv" hidden>
@@ -906,7 +930,7 @@ $("pvNext").onclick = () => show(cur + 1);
 /* 복사한 이미지 붙여넣기 (Ctrl+V) */
 document.addEventListener("paste", e => {
   const files = [...(e.clipboardData?.items || [])].filter(i => i.type.startsWith("image/")).map(i => i.getAsFile());
-  if(files.length) addFiles(files);
+  if(files.length && $("pickOv").hidden) addFiles(files); // 스포이드 창이 열려 있으면 그쪽에서 받음
 });
 
 /* ---------- 사진 위치 조정: 마우스·터치 공통 — 한 손가락은 이동, 두 손가락은 확대/축소 ---------- */
@@ -1755,17 +1779,19 @@ function hslRGB(h, s, l){
   return [f(h + 1 / 3) * 255, f(h) * 255, f(h - 1 / 3) * 255];
 }
 const lipPhotoCache = new Map();
-function lipPhotoURL(hex){
+/* asIs = 발색 사진에서 스포이드로 딴 색 (이미 '발랐을 때 색'이라 혈색 보정을 안 함) */
+function lipPhotoURL(hex, asIs){
   if(!lipTpl) return lipDataURL(hex);
-  if(lipPhotoCache.has(hex)) return lipPhotoCache.get(hex);
+  const key = hex + (asIs ? "|p" : "");
+  if(lipPhotoCache.has(key)) return lipPhotoCache.get(key);
   const {w, h, data, raw, mask, meanL} = lipTpl;
   /* 실제로 바른 것처럼: 틴트·글로스는 원래 입술 혈색이 비쳐 보임 → 밝은(누드·피치) 색일수록 혈색을 더 섞고
      채도를 살짝 올림. 안 그러면 피부색과 비슷해져 컨실러를 바른 것처럼 보임 */
   const t0 = hexRGB(hex), L0 = (0.299 * t0[0] + 0.587 * t0[1] + 0.114 * t0[2]) / 255;
-  const light = Math.max(0, Math.min(1, (L0 - 0.45) / 0.33));
+  const light = asIs ? 0 : Math.max(0, Math.min(1, (L0 - 0.45) / 0.33));
   /* 회색기 많은 색(모브·플럼 등)도 그대로 칠하면 핏기 없는 보랏빛 회색이 돼서 혈색을 더 섞음 */
   const mute = Math.max(0, Math.min(1, (0.42 - rgbHSL(t0)[1]) / 0.25));
-  const NATURAL = [186, 84, 92], mixW = Math.min(0.5, 0.1 + 0.3 * light + 0.22 * mute);
+  const NATURAL = [186, 84, 92], mixW = asIs ? 0 : Math.min(0.5, 0.1 + 0.3 * light + 0.22 * mute);
   let t = t0.map((v, k) => v * (1 - mixW) + NATURAL[k] * mixW);
   { const [hh, ss, ll] = rgbHSL(t); t = hslRGB(hh, Math.min(1, ss * (1 + 0.3 * light)), ll); }
   /* 밝은 색일수록 그늘을 약하게 (빨간 틀의 진한 그늘이 밝은 색에선 탁한 회색으로 보여서) */
@@ -1791,7 +1817,7 @@ function lipPhotoURL(hex){
   }
   const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").putImageData(out, 0, 0);
   const url = c.toDataURL("image/jpeg", 0.92);
-  lipPhotoCache.set(hex, url);
+  lipPhotoCache.set(key, url);
   return url;
 }
 /* 사실적인 입술: 큐피드 활 윗입술 + 도톰한 아랫입술, 그라데이션 음영, 은은한 광택 (200×110 좌표, 3배로 그림) */
@@ -1877,7 +1903,7 @@ function renderCardNode(node, d, W, H){
       const parts = (c.n || "").split(/\s*\/\s*/);
       const brand = parts.length > 1 ? parts[0] : "", shadeName = parts.length > 1 ? parts.slice(1).join(" ") : parts[0];
       const img = photo
-        ? `<img class="lipph" src="${lipPhotoURL(c.c)}" alt="" style="width:${lipW}px;height:${lipW * ratio}px">`
+        ? `<img class="lipph" src="${lipPhotoURL(c.c, c.picked)}" alt="" style="width:${lipW}px;height:${lipW * ratio}px">`
         : `<img class="lip" src="${lipDataURL(c.c)}" alt="" style="width:${lipW}px;height:${lipW * ratio}px">`;
       return `<div class="cn-row">${img}<div class="tx">${brand ? `<div class="br">${escH(brand)}</div>` : ""}<div class="sh">${escH(shadeName)}</div>${d.hex ? `<div class="hx">${escH(c.c.toUpperCase())}</div>` : ""}</div></div>`;
     }).join("");
@@ -1945,7 +1971,7 @@ let cardEd = null; // {data, target(p 또는 null=새 카드)}
 const cardDefault = () => { const s = SEASONS.autumn; return {type:"palette", label:"", title:s.title, sub:s.sub, colors:s.colors.map(([c, n]) => ({c, n})), hex:true, body:"", bg:"auto", shape:"photo", note:""}; };
 function renderColorRows(){
   const d = cardEd.data;
-  $("colorRows").innerHTML = d.colors.map((c, i) => `<div class="color-row" data-ci="${i}"><input type="color" value="${c.c}" data-k="c" aria-label="색 고르기"><input type="text" value="${escH(c.n)}" data-k="n" placeholder="색 이름 (예: 코랄)"><input type="text" class="hexin" value="${c.c.toUpperCase()}" data-k="hex" maxlength="7" aria-label="색상 코드"><button type="button" data-k="del" aria-label="색 빼기">×</button></div>`).join("");
+  $("colorRows").innerHTML = d.colors.map((c, i) => `<div class="color-row" data-ci="${i}"><input type="color" value="${c.c}" data-k="c" aria-label="색 고르기"><input type="text" value="${escH(c.n)}" data-k="n" placeholder="색 이름 (예: 코랄)"><input type="text" class="hexin" value="${c.c.toUpperCase()}" data-k="hex" maxlength="7" aria-label="색상 코드"><button type="button" data-k="pick" class="${c.picked ? "picked" : ""}" title="사진에서 색 따기" aria-label="사진에서 색 따기">🎯</button><button type="button" data-k="del" aria-label="색 빼기">×</button></div>`).join("");
   $("colorAdd").disabled = d.colors.length >= 6;
 }
 function syncCardForm(){
@@ -1994,12 +2020,14 @@ $("c_hex").addEventListener("change", e => { if(!cardEd) return; cardEd.data.hex
 $("colorRows").addEventListener("input", e => {
   const row = e.target.closest("[data-ci]"); if(!row || !cardEd) return;
   const c = cardEd.data.colors[Number(row.dataset.ci)], k = e.target.dataset.k;
-  if(k === "c"){ c.c = e.target.value; row.querySelector(".hexin").value = c.c.toUpperCase(); }
+  if(k === "c"){ c.c = e.target.value; c.picked = false; row.querySelector(".hexin").value = c.c.toUpperCase(); }
   else if(k === "n") c.n = e.target.value;
-  else if(k === "hex"){ let v = e.target.value.trim(); if(!v.startsWith("#")) v = "#" + v; if(/^#[0-9a-f]{6}$/i.test(v)){ c.c = v.toLowerCase(); row.querySelector("[data-k=c]").value = c.c; } else return; }
+  else if(k === "hex"){ let v = e.target.value.trim(); if(!v.startsWith("#")) v = "#" + v; if(/^#[0-9a-f]{6}$/i.test(v)){ c.c = v.toLowerCase(); c.picked = false; row.querySelector("[data-k=c]").value = c.c; } else return; }
+  if(k !== "n") row.querySelector("[data-k=pick]").classList.remove("picked");
   drawCardPreview();
 });
 $("colorRows").addEventListener("click", e => {
+  if(e.target.dataset.k === "pick" && cardEd){ openPicker(Number(e.target.closest("[data-ci]").dataset.ci)); return; }
   if(e.target.dataset.k !== "del" || !cardEd) return;
   if(cardEd.data.colors.length <= 1) return;
   cardEd.data.colors.splice(Number(e.target.closest("[data-ci]").dataset.ci), 1);
@@ -2011,6 +2039,64 @@ $("colorAdd").onclick = () => {
   cardEd.data.colors.push({c:last, n:""});
   renderColorRows(); drawCardPreview();
 };
+
+/* 🎯 스포이드: 제품 발색 사진/캡처에서 누른 곳 주변 색을 따옴. 불러온 사진은 다음에 열 때도 그대로 둠 */
+let pickIdx = -1, pickHexVal = null, pickImgLoaded = false;
+function openPicker(i){
+  pickIdx = i; pickHexVal = null;
+  $("pickApply").disabled = true; $("pickResult").hidden = true; $("pickDot").hidden = true;
+  $("pickStage").hidden = !pickImgLoaded;
+  $("pickOv").hidden = false;
+}
+function closePicker(){ $("pickOv").hidden = true; pickIdx = -1; }
+function loadPickImage(file){
+  if(!file || !file.type.startsWith("image/")) return;
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onload = () => {
+    const cv = $("pickCanvas"), s = Math.min(1, 1600 / Math.max(img.width, img.height));
+    cv.width = Math.round(img.width * s); cv.height = Math.round(img.height * s);
+    cv.getContext("2d", {willReadFrequently: true}).drawImage(img, 0, 0, cv.width, cv.height);
+    URL.revokeObjectURL(url);
+    pickImgLoaded = true; $("pickStage").hidden = false; $("pickDot").hidden = true;
+  };
+  img.src = url;
+}
+$("pickImgBtn").onclick = () => $("pickFile").click();
+$("pickFile").onchange = e => { loadPickImage(e.target.files[0]); e.target.value = ""; };
+document.addEventListener("paste", e => {
+  if($("pickOv").hidden) return;
+  const it = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
+  if(it){ e.preventDefault(); loadPickImage(it.getAsFile()); }
+});
+$("pickCanvas").addEventListener("click", e => {
+  const cv = $("pickCanvas"), r = cv.getBoundingClientRect();
+  const x = Math.round((e.clientX - r.left) * cv.width / r.width), y = Math.round((e.clientY - r.top) * cv.height / r.height);
+  /* 주변 칸을 모아 밝기순으로 줄 세운 뒤 가운데 절반만 평균 → 빛 반사·그림자에 덜 흔들림 */
+  const R = Math.max(4, Math.round(Math.min(cv.width, cv.height) / 120));
+  const x0 = Math.max(0, x - R), y0 = Math.max(0, y - R);
+  const d = cv.getContext("2d").getImageData(x0, y0, Math.min(cv.width, x + R + 1) - x0, Math.min(cv.height, y + R + 1) - y0).data;
+  const px = [];
+  for(let i = 0; i < d.length; i += 4) px.push([d[i], d[i+1], d[i+2], 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]]);
+  px.sort((a, b) => a[3] - b[3]);
+  const mid = px.slice(Math.floor(px.length * 0.25), Math.ceil(px.length * 0.75));
+  const avg = [0, 1, 2].map(k => Math.round(mid.reduce((s, p) => s + p[k], 0) / mid.length));
+  pickHexVal = "#" + avg.map(v => v.toString(16).padStart(2, "0")).join("");
+  const dot = $("pickDot"), sr = $("pickStage").getBoundingClientRect();
+  dot.style.left = (e.clientX - sr.left) + "px"; dot.style.top = (e.clientY - sr.top) + "px";
+  dot.style.background = pickHexVal; dot.hidden = false;
+  $("pickSw").style.background = pickHexVal; $("pickHex").textContent = pickHexVal.toUpperCase();
+  lipTplReady.then(() => { if(pickHexVal) $("pickLip").src = lipPhotoURL(pickHexVal, true); });
+  $("pickResult").hidden = false; $("pickApply").disabled = false;
+});
+$("pickApply").onclick = () => {
+  const c = cardEd?.data.colors[pickIdx];
+  if(c && pickHexVal){ c.c = pickHexVal; c.picked = true; renderColorRows(); drawCardPreview(); }
+  closePicker();
+};
+$("pickCancel").onclick = closePicker;
+$("pickClose").onclick = closePicker;
+$("pickOv").addEventListener("click", e => { if(e.target.id === "pickOv") closePicker(); });
+
 $("cardSave").onclick = async () => {
   if(!cardEd) return;
   const {data, target} = cardEd;
