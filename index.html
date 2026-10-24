@@ -228,7 +228,8 @@ html,button,select,label{touch-action:manipulation}
 .cardnode.t-text .cn-list{flex:none;justify-content:flex-start}
 .cn-sw{display:flex;flex-direction:column;align-items:center;text-align:center}
 .cn-sw .dot{border-radius:50%;box-shadow:0 calc(12px*var(--s,1)) calc(30px*var(--s,1)) rgba(0,0,0,.16)}
-.cn-sw .nm{font-size:calc(36px*var(--s,1));font-weight:700;margin-top:calc(22px*var(--s,1));line-height:1.25;word-break:keep-all}
+.cn-sw .nm{font-size:calc(36px*var(--s,1));font-weight:700;margin-top:calc(22px*var(--s,1));line-height:1.25;word-break:keep-all;white-space:pre-line}
+.cn-sw .lip{display:block;filter:drop-shadow(0 calc(8px*var(--s,1)) calc(14px*var(--s,1)) rgba(0,0,0,.12))}
 .cn-sw .hx{font-size:calc(25px*var(--s,1));font-weight:600;opacity:.55;margin-top:calc(6px*var(--s,1));letter-spacing:1px}
 .cn-list{list-style:none;margin:calc(56px*var(--s,1)) 0 0;padding:0;display:flex;flex-direction:column;gap:calc(30px*var(--s,1));flex:1;justify-content:center}
 .cn-list li{font-size:calc(44px*var(--s,1));font-weight:600;line-height:1.45;display:flex;gap:calc(22px*var(--s,1));word-break:keep-all}
@@ -407,6 +408,9 @@ html,button,select,label{touch-action:manipulation}
         <div class="color-rows" id="colorRows"></div>
         <div class="order"><button type="button" id="colorAdd">＋ 색 추가</button></div>
         <label class="chk"><input type="checkbox" id="c_hex" checked> 색상 코드(HEX) 표시</label>
+        <label class="l" style="margin-top:10px">컬러칩 모양</label>
+        <div class="seg" id="f_cardShape"><button type="button" data-v="lip" class="on">💋 입술</button><button type="button" data-v="circle">⚪ 동그라미</button></div>
+        <p class="hint" style="font-size:11px;color:var(--m);margin:4px 0 0">색 이름 칸에서 줄을 바꾸려면 ' / '를 쓰세요 (예: 롬앤 쥬시 래스팅 / 10 베어 애프리콧)</p>
       </div>
       <div id="cardBodyField" hidden><label class="l">본문 <span style="font-weight:normal;color:var(--m)">(한 줄에 하나씩 · 앞에 • 가 붙어요)</span></label><textarea id="c_body" placeholder="예:&#10;립은 MLBB 코랄로 생기 있게&#10;블러셔는 피치 톤으로&#10;골드 액세서리가 잘 어울려요"></textarea></div>
       <div><label class="l">배경</label>
@@ -1682,6 +1686,32 @@ const lum = h => { const [r, g, b] = hexRGB(h); return (0.299 * r + 0.587 * g + 
 const escH = s => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /* 카드 내용을 W×H 크기의 cardnode에 그림 (미리보기·저장 공통) */
+/* 입술 모양 컬러칩 — 캔버스로 그려 이미지로 넣음 (저장 이미지 도구가 SVG를 불안정하게 그려서) */
+const lipCache = new Map();
+function shade(h, f){ return rgbHex(hexRGB(h).map(c => f < 0 ? c * (1 + f) : c + (255 - c) * f)); } // f<0 어둡게, f>0 밝게
+function lipDataURL(hex){
+  if(lipCache.has(hex)) return lipCache.get(hex);
+  const W = 400, H = 230, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d"); g.scale(W / 200, W / 200); // 200×115 좌표로 그림
+  const upper = new Path2D("M8,58 C30,40 56,16 80,18 C90,19 95,26 100,29 C105,26 110,19 120,18 C144,16 170,40 192,58 C166,62 134,59 100,62 C66,59 34,62 8,58 Z");
+  const lower = new Path2D("M8,58 C34,62 66,59 100,62 C134,59 166,62 192,58 C174,90 142,108 100,108 C58,108 26,90 8,58 Z");
+  g.fillStyle = shade(hex, -0.1); g.fill(upper);
+  g.fillStyle = hex; g.fill(lower);
+  /* 아랫입술 아래쪽에 살짝 그늘 → 입체감 */
+  const gr = g.createLinearGradient(0, 70, 0, 108); gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(1, "rgba(0,0,0,.14)");
+  g.fillStyle = gr; g.fill(lower);
+  /* 가운데 입술 선 */
+  g.strokeStyle = shade(hex, -0.42); g.lineWidth = 2.6; g.lineCap = "round";
+  g.stroke(new Path2D("M14,59 C40,64 70,61 100,64 C130,61 160,64 186,59"));
+  /* 윤기 (하이라이트) */
+  g.fillStyle = "rgba(255,255,255,.55)";
+  g.beginPath(); g.ellipse(64, 34, 13, 5, -0.35, 0, Math.PI * 2); g.fill();
+  g.fillStyle = "rgba(255,255,255,.32)";
+  g.beginPath(); g.ellipse(80, 84, 16, 5, -0.12, 0, Math.PI * 2); g.fill();
+  const url = c.toDataURL("image/png");
+  lipCache.set(hex, url);
+  return url;
+}
 function renderCardNode(node, d, W, H){
   const s = Math.min(W / 1080, H / 1250, 1.1);
   node.className = "cardnode";
@@ -1702,17 +1732,26 @@ function renderCardNode(node, d, W, H){
   const grid = node.querySelector(".cn-grid"), n = cols0.length;
   if(!n) return;
   const wide = W > H * 1.2;
-  const cols = wide ? n : n <= 3 ? n : n === 4 ? 2 : 3, rows = Math.ceil(n / cols);
+  /* 입술은 가로로 넓어서 칸 수를 적게: 1~2개는 세로로, 3~4개는 2칸, 5~6개는 3칸 */
+  const lipCols = n <= 2 ? 1 : n <= 4 ? 2 : 3;
+  const cols = wide ? n : d.shape === "lip" ? lipCols : n <= 3 ? n : n === 4 ? 2 : 3, rows = Math.ceil(n / cols);
   /* 남은 공간에 맞춰 동그라미 크기 계산 */
   const pad = 96 * s, gap = 40 * s;
   const headH = node.querySelector(".cn-head").getBoundingClientRect().height / (node.getBoundingClientRect().height / H || 1);
   const gw = W - pad * 2, gh = H - 110 * s * 2 - headH - 40 * s;
   const cellW = (gw - gap * (cols - 1)) / cols;
+  const lips = d.shape === "lip";
   const textH = (36 * 1.25 * 2 + 22 + (d.hex ? 25 * 1.4 + 6 : 0)) * s;
   const cellH = (gh - gap * (rows - 1)) / rows;
   const dot = Math.max(60 * s, Math.min(cellW * 0.82, cellH - textH, 300 * s));
   grid.style.gap = `${gap}px`;
-  grid.innerHTML = cols0.map(c => `<div class="cn-sw" style="width:${Math.floor(cellW) - 1}px"><div class="dot" style="width:${dot}px;height:${dot}px;background:${c.c}"></div><div class="nm">${escH(c.n)}</div>${d.hex ? `<div class="hx">${escH(c.c.toUpperCase())}</div>` : ""}</div>`).join("");
+  /* 입술은 가로로 넓은 모양(가로:세로 = 200:115)이라 칸 폭에 맞춰 크기 계산 */
+  const lipW = Math.max(100 * s, Math.min(cellW * 0.94, (cellH - textH) / 0.575, 460 * s));
+  const chip = c => lips
+    ? `<img class="lip" src="${lipDataURL(c.c)}" alt="" style="width:${lipW}px;height:${lipW * 0.575}px">`
+    : `<div class="dot" style="width:${dot}px;height:${dot}px;background:${c.c}"></div>`;
+  /* 색 이름의 ' / '는 줄바꿈 */
+  grid.innerHTML = cols0.map(c => `<div class="cn-sw" style="width:${Math.floor(cellW) - 1}px">${chip(c)}<div class="nm">${escH((c.n || "").replace(/\s*\/\s*/g, "\n"))}</div>${d.hex ? `<div class="hx">${escH(c.c.toUpperCase())}</div>` : ""}</div>`).join("");
 }
 /* 카드를 사진 칸 크기의 JPG 파일로 */
 async function cardToFile(d){
@@ -1753,7 +1792,7 @@ $("f_preset").addEventListener("click", e => { if(e.target.closest("button")) re
 
 /* ---- 카드 편집 창 ---- */
 let cardEd = null; // {data, target(p 또는 null=새 카드)}
-const cardDefault = () => { const s = SEASONS.autumn; return {type:"palette", label:"", title:s.title, sub:s.sub, colors:s.colors.map(([c, n]) => ({c, n})), hex:true, body:"", bg:"auto"}; };
+const cardDefault = () => { const s = SEASONS.autumn; return {type:"palette", label:"", title:s.title, sub:s.sub, colors:s.colors.map(([c, n]) => ({c, n})), hex:true, body:"", bg:"auto", shape:"lip"}; };
 function renderColorRows(){
   const d = cardEd.data;
   $("colorRows").innerHTML = d.colors.map((c, i) => `<div class="color-row" data-ci="${i}"><input type="color" value="${c.c}" data-k="c" aria-label="색 고르기"><input type="text" value="${escH(c.n)}" data-k="n" placeholder="색 이름 (예: 코랄)"><input type="text" class="hexin" value="${c.c.toUpperCase()}" data-k="hex" maxlength="7" aria-label="색상 코드"><button type="button" data-k="del" aria-label="색 빼기">×</button></div>`).join("");
@@ -1761,7 +1800,7 @@ function renderColorRows(){
 }
 function syncCardForm(){
   const d = cardEd.data, pal = d.type === "palette";
-  setSegUI("f_cardType", d.type); setSegUI("f_cardBg", d.bg);
+  setSegUI("f_cardType", d.type); setSegUI("f_cardBg", d.bg); setSegUI("f_cardShape", d.shape || "circle");
   $("cardPaletteFields").hidden = $("cardColorsField").hidden = $("cardSubField").hidden = !pal;
   $("cardLabelField").hidden = $("cardBodyField").hidden = pal;
   $("c_label").value = d.label; $("c_title").value = d.title; $("c_sub").value = d.sub; $("c_body").value = d.body; $("c_hex").checked = d.hex;
@@ -1792,6 +1831,7 @@ $("cardEditBtn").onclick = () => { if(P()?.card) openCardEditor(P()); };
 $("cardClose").onclick = $("cardCancel").onclick = closeCardEditor;
 wireSeg("f_cardType", v => { if(!cardEd) return; cardEd.data.type = v; syncCardForm(); });
 wireSeg("f_cardBg", v => { if(!cardEd) return; cardEd.data.bg = v; drawCardPreview(); });
+wireSeg("f_cardShape", v => { if(!cardEd) return; cardEd.data.shape = v; drawCardPreview(); });
 $("seasonRow").addEventListener("click", e => {
   const b = e.target.closest("[data-s]"); if(!b || !cardEd) return;
   const s = SEASONS[b.dataset.s];
