@@ -1758,7 +1758,16 @@ const lipPhotoCache = new Map();
 function lipPhotoURL(hex){
   if(!lipTpl) return lipDataURL(hex);
   if(lipPhotoCache.has(hex)) return lipPhotoCache.get(hex);
-  const {w, h, data, raw, mask, meanL} = lipTpl, t = hexRGB(hex);
+  const {w, h, data, raw, mask, meanL} = lipTpl;
+  /* 실제로 바른 것처럼: 틴트·글로스는 원래 입술 혈색이 비쳐 보임 → 밝은(누드·피치) 색일수록 혈색을 더 섞고
+     채도를 살짝 올림. 안 그러면 피부색과 비슷해져 컨실러를 바른 것처럼 보임 */
+  const t0 = hexRGB(hex), L0 = (0.299 * t0[0] + 0.587 * t0[1] + 0.114 * t0[2]) / 255;
+  const light = Math.max(0, Math.min(1, (L0 - 0.45) / 0.33));
+  /* 회색기 많은 색(모브·플럼 등)도 그대로 칠하면 핏기 없는 보랏빛 회색이 돼서 혈색을 더 섞음 */
+  const mute = Math.max(0, Math.min(1, (0.42 - rgbHSL(t0)[1]) / 0.25));
+  const NATURAL = [186, 84, 92], mixW = Math.min(0.5, 0.1 + 0.3 * light + 0.22 * mute);
+  let t = t0.map((v, k) => v * (1 - mixW) + NATURAL[k] * mixW);
+  { const [hh, ss, ll] = rgbHSL(t); t = hslRGB(hh, Math.min(1, ss * (1 + 0.3 * light)), ll); }
   /* 밝은 색일수록 그늘을 약하게 (빨간 틀의 진한 그늘이 밝은 색에선 탁한 회색으로 보여서) */
   const tL = (0.299 * t[0] + 0.587 * t[1] + 0.114 * t[2]) / 255;
   const shadowPow = 1.1 - 0.75 * Math.max(0, tL - 0.3);
@@ -1777,7 +1786,7 @@ function lipPhotoURL(hex){
       /* 그냥 어둡게(회색빛)와 색감 살린 그늘(너무 쨍함)을 반반 섞음 */
       const a1 = t.map(v => v * sh), a2 = hslRGB(tH, Math.min(1, tS * (1 + (1 - sh) * 0.25)), tLL * (0.35 + 0.65 * sh));
       nc = a1.map((v, k) => v * 0.5 + a2[k] * 0.5);
-    }else nc = t.map(v => v + (255 - v) * Math.min(1, (rr - 1) * 0.9));
+    }else nc = t.map(v => v + (255 - v) * Math.min(1, (rr - 1) * (0.9 - 0.35 * light))); // 밝은 색은 광택을 덜 하얗게
     o[i * 4] = r * (1 - a) + nc[0] * a; o[i * 4 + 1] = g * (1 - a) + nc[1] * a; o[i * 4 + 2] = b * (1 - a) + nc[2] * a; o[i * 4 + 3] = 255;
   }
   const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").putImageData(out, 0, 0);
