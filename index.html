@@ -419,6 +419,7 @@ html,button,select,label{touch-action:manipulation}
       <label>레이아웃</label>
       <div class="seg" id="f_layout"><button type="button" data-v="basic" class="on">COLOR.M 로고</button><button type="button" data-v="magazine">매거진</button><button type="button" data-v="gallery">메이커 갤러리</button></div>
       <p class="hint">'매거진'은 베이지 바탕에 사진을 틀로 넣고 아래에 제목을 써요. 피드 색감을 하나로 맞출 때 좋아요 (카드 만들기와 같은 톤)<br>'메이커 갤러리'는 갤러리 SNS 이미지와 같은 모양이에요 (하단에 메이커 이름 · COLOR.M MAKER GALLERY)</p>
+      <label class="chk" id="layEachRow" hidden><input type="checkbox" id="f_layEach"> 사진마다 레이아웃 따로 <span>켜면 레이아웃 · 글자 위치 · 정렬이 지금 고른 사진에만 적용돼요 (위 사진 줄에서 사진을 골라 하나씩 바꿔요)</span></label>
       <div id="magOpts" hidden>
         <label style="margin-top:10px">위쪽 작은 영문 라벨</label>
         <input id="f_magLabel" value="COLOR.M" placeholder="예: COLOR.M CLASS · PERSONAL COLOR">
@@ -612,24 +613,42 @@ function applyRatio(){
 
 const TOP_BIAS = 0.6; // 위아래가 잘릴 때 0 = 가운데, 1 = 사진 맨 위에 맞춤
 /* 사진이 보이는 칸 = 전체에서 하단 흰 띠를 뺀 부분 */
+/* ---------- 레이아웃(로고/매거진/갤러리) · 글자 위치 · 정렬 ----------
+   G = 모든 사진 공통. '사진마다 레이아웃 따로'를 켜면 사진마다 p.lay를 따로 가짐 */
+let layEach = false;
+const G = {layout:"basic", pos:"bottom", align:"left"};
+function layOf(i){ const p = photos[i]; return layEach && p && p.lay ? p.lay : G; }
+function applyLayClasses(el, L){
+  el.classList.toggle("lay-gallery", L.layout === "gallery");
+  el.classList.toggle("lay-mag", L.layout === "magazine");
+  el.classList.remove("pos-top", "pos-mid", "pos-bottom"); el.classList.add("pos-" + L.pos);
+  el.classList.remove("align-left", "align-center"); el.classList.add("align-" + L.align);
+}
+/* 하단 로고 띠 높이 — 갤러리 레이아웃은 띠가 더 두꺼워서 레이아웃마다 잼 */
+function footH(layout){
+  const r = $("posterRoot"), had = r.classList.contains("lay-gallery");
+  r.classList.toggle("lay-gallery", layout === "gallery");
+  const h = $("o_foot").offsetHeight;
+  r.classList.toggle("lay-gallery", had);
+  return h;
+}
 function photoBox(p){
-  const r = ratio();
-  if($("posterRoot").classList.contains("lay-mag")) return magBox(p ? photos.indexOf(p) : Math.max(cur, 0));
-  return {w:r.w, h:r.h - $("o_foot").offsetHeight};
+  const r = ratio(), i = p ? photos.indexOf(p) : Math.max(cur, 0), L = layOf(i);
+  if(L.layout === "magazine") return magBox(i);
+  return {w:r.w, h:r.h - footH(L.layout)};
 }
 /* 매거진: 사진 틀 = 사방 56px 여백, 아래쪽 약 1/3은 글자 자리.
    제목·작은 글씨가 둘 다 없는 장은 글자 자리 없이 사진이 아래까지 (베이지 액자처럼) */
 function magBox(i){
   const r = ratio(), k = parseFloat($("posterRoot").style.getPropertyValue("--k")) || 1, pad = 56 * k;
-  const avail = r.h - $("o_foot").offsetHeight;
+  const avail = r.h - footH("magazine");
   const t = textOf(Math.max(i ?? 0, 0)), empty = !t.title.trim() && !t.sub.trim();
   return {w:r.w - pad * 2, h:Math.round(empty ? avail - pad * 2 : avail * 0.67 - pad), empty};
 }
 function setMagSize(){ $("posterRoot").style.setProperty("--mag-ph", magBox(Math.max(cur, 0)).h + "px"); }
 /* 매거진에서 글자가 생기거나 없어지면 틀 크기가 바뀌니 손대지 않은 사진은 다시 맞춤 */
 function magRefit(){
-  if(!$("posterRoot").classList.contains("lay-mag")) return;
-  photos.forEach(p => { if(!p.manual) fitPhoto(p); });
+  photos.forEach((p, i) => { if(!p.manual && layOf(i).layout === "magazine") fitPhoto(p); });
   if(P()) applyImgTransform();
 }
 function fitPhoto(p){
@@ -652,14 +671,14 @@ function fitPhoto(p){
     const reserve = textReserve(photos.indexOf(p));
     const fit = Math.min(1, box.w / p.baseW, (box.h - reserve) / p.baseH);
     p.zoom = fit * CONTAIN_FIT;
-    p.panY = $("posterRoot").classList.contains("pos-top") ? reserve / 2 : -reserve / 2;
+    p.panY = layOf(photos.indexOf(p)).pos === "top" ? reserve / 2 : -reserve / 2;
   }
 }
 /* 확대를 이만큼까지 줄이면 사진 전체가 칸 안에 들어옴 */
 /* i번 사진의 글자가 차지하는 높이(포스터 기준 px). 가운데 배치거나 글자가 없으면 0 */
 function textReserve(i){
   const root = $("posterRoot");
-  if(root.classList.contains("pos-mid")) return 0;
+  if(layOf(Math.max(i, 0)).pos === "mid") return 0;
   const t = textOf(Math.max(i, 0));
   if(!t.title.trim() && !t.sub.trim()) return 0;
   const el = root.querySelector(".p-text");
@@ -833,6 +852,7 @@ function renderStrip(){
   $("adjField").hidden = !n || isCard;
   $("adjFor").textContent = n > 1 ? `(${cur + 1}번 사진)` : "";
   $("adjAll").hidden = n < 2;
+  $("layEachRow").hidden = n < 2 && !layEach;
   loadAdjInputs();
   $("cardEditBtn").hidden = !isCard;
   $("cardNewBtn").disabled = n >= MAX_PHOTOS;
@@ -853,6 +873,10 @@ function show(i){
   if(i !== cur) selBox = -1;
   cur = i;
   const p = P(), img = $("o_img");
+  /* 사진마다 레이아웃이 다를 수 있으니 이 사진의 레이아웃으로 미리보기·버튼을 맞춤 */
+  const L = layOf(Math.max(i, 0));
+  setSegUI("f_layout", L.layout); setSegUI("f_pos", L.pos); setSegUI("f_align", L.align);
+  applyLayout();
   if(p){
     img.src = p.url; img.hidden = false;
     placeImg(img, p);
@@ -1168,8 +1192,8 @@ wireSeg("f_preset", v => {
   /* 비율·로고 띠가 바뀌었을 수 있으니 사진 크기 다시 맞춤 (cover로 바뀐 경우 f_fit에서 이미 맞췄어도 한 번 더) */
   photos.forEach(fitPhoto); show(cur);
 });
-wireSeg("f_pos", v => { root.classList.remove("pos-top", "pos-mid", "pos-bottom"); root.classList.add("pos-" + v); autoRefit(); });
-wireSeg("f_align", v => { root.classList.remove("align-left", "align-center"); root.classList.add("align-" + v); });
+wireSeg("f_pos", v => { setLay("pos", v); autoRefit(); });
+wireSeg("f_align", v => { setLay("align", v); });
 document.querySelector(".panel").addEventListener("input", clearPending);
 document.querySelector(".panel").addEventListener("change", clearPending);
 window.addEventListener("resize", applyRatio);
@@ -1618,6 +1642,7 @@ async function renderPhoto(i){
   const r = ratio(), p = photos[i];
   const clone = $("posterRoot").cloneNode(true);
   Object.assign(clone.style, {transform:"none", position:"fixed", top:"0", left:"-99999px", width:r.w+"px", height:r.h+"px"});
+  applyLayClasses(clone, layOf(i)); // 사진마다 레이아웃이 다를 수 있음
   const img = clone.querySelector(".p-main");
   img.src = p.url; img.hidden = false;
   placeImg(img, p);
@@ -1704,14 +1729,14 @@ async function collectWork(){
     settings:{
       preset:segVal("f_preset"), ratio:$("f_ratio").value, ratioManuallySet, reelsSafe:$("f_reelsSafe").checked,
       fit:segVal("f_fit"), bg:segVal("f_bgMode"), textColor:segVal("f_textColor"), shade:segVal("f_shade"),
-      pos:segVal("f_pos"), align:segVal("f_align"), size:segVal("f_size"), textOn:segVal("f_textOn"),
+      pos:G.pos, align:G.align, size:segVal("f_size"), textOn:segVal("f_textOn"), layEach,
       shared:{...shared}, foot:$("f_foot").value,
       blurType:segVal("f_blurType"), blurShape:segVal("f_blurShape"), blurLevel,
-      layout:segVal("f_layout"), maker:$("f_maker").value, makerCustom:$("f_makerCustom").value, magLabel:$("f_magLabel").value,
+      layout:G.layout, maker:$("f_maker").value, makerCustom:$("f_makerCustom").value, magLabel:$("f_magLabel").value,
       brand:$("f_brand").checked, aiMark:$("f_aiMark").checked
     },
     photos:await Promise.all(photos.map(async p => ({
-      name:p.name, blob:await originalBlob(p), crop:p.crop || null, blurs:p.blurs, adj:p.adj || null, card:p.card || null,
+      name:p.name, blob:await originalBlob(p), crop:p.crop || null, blurs:p.blurs, adj:p.adj || null, lay:p.lay || null, card:p.card || null,
       zoom:p.zoom, panX:p.panX, panY:p.panY, manual:!!p.manual, title:p.title, sub:p.sub,
       titleEdited:!!p.titleEdited, subEdited:!!p.subEdited
     })))
@@ -1741,6 +1766,8 @@ async function restoreWork(w){
     shared.title = s.shared.title || ""; shared.sub = s.shared.sub || "";
     $("f_foot").value = s.foot || "";
     setSegUI("f_layout", s.layout || "basic");
+    Object.assign(G, {layout:s.layout || "basic", pos:s.pos || "bottom", align:s.align || "left"});
+    layEach = !!s.layEach; $("f_layEach").checked = layEach;
     $("f_magLabel").value = s.magLabel ?? "COLOR.M";
     $("f_maker").value = s.maker || "Character Maker"; $("f_makerCustom").value = s.makerCustom || "";
     $("f_brand").checked = !!s.brand; $("f_aiMark").checked = !!s.aiMark;
@@ -1758,6 +1785,7 @@ async function restoreWork(w){
       }
       p.blurs = sp.blurs || [];
       p.adj = sp.adj || null;
+      p.lay = sp.lay || null;
       if(sp.card) p.card = sp.card;
       p.title = sp.title; p.sub = sp.sub; p.titleEdited = !!sp.titleEdited; p.subEdited = !!sp.subEdited;
       photos.push(p);
@@ -2301,9 +2329,8 @@ $("cardSave").onclick = async () => {
 
 /* ---------- 레이아웃: COLOR.M 로고 / 메이커 갤러리 + 왼쪽 위 COLOR.M·AI 표시 ---------- */
 function applyLayout(){
-  const gallery = segVal("f_layout") === "gallery", mag = segVal("f_layout") === "magazine";
-  root.classList.toggle("lay-gallery", gallery);
-  root.classList.toggle("lay-mag", mag);
+  const L = layOf(Math.max(cur, 0)), gallery = L.layout === "gallery", mag = L.layout === "magazine";
+  applyLayClasses(root, L);
   $("magOpts").hidden = !mag;
   $("f_textColor").closest(".field").hidden = mag; // 매거진은 글자 색·그늘이 정해져 있음
   setMagSize();
@@ -2318,11 +2345,24 @@ function applyLayout(){
   $("o_brandSub").hidden = !gallery; // 'AI MAKER GALLERY'는 갤러리 레이아웃에서만
   $("o_brandAi").hidden = !$("f_aiMark").checked;
 }
+/* 레이아웃·글자 위치·정렬 바꾸기: '사진마다 따로'면 지금 사진에만, 아니면 모든 사진에 */
+function setLay(key, v){
+  if(layEach && P()) P().lay = {...layOf(cur), [key]: v};
+  else G[key] = v;
+  applyLayout();
+}
 wireSeg("f_layout", v => {
   if(v === "gallery"){ $("f_brand").checked = true; $("f_aiMark").checked = true; }
   if(v === "magazine"){ $("f_brand").checked = false; $("f_aiMark").checked = false; }
-  applyLayout();
-  photos.forEach(fitPhoto); show(cur); // 하단 띠 높이가 바뀌니 사진 다시 맞춤
+  setLay("layout", v);
+  if(layEach && P()) fitPhoto(P()); else photos.forEach(fitPhoto); // 사진 칸 크기가 바뀌니 다시 맞춤
+  show(cur);
+});
+$("f_layEach").addEventListener("change", () => {
+  layEach = $("f_layEach").checked;
+  /* 켜면 각 사진이 지금 공통 레이아웃으로 시작 → 바꿀 사진만 고치면 됨 */
+  if(layEach) photos.forEach(p => { if(!p.lay) p.lay = {...G}; });
+  photos.forEach(fitPhoto); show(cur);
 });
 $("f_magLabel").addEventListener("input", syncText);
 $("f_maker").addEventListener("change", applyLayout);
