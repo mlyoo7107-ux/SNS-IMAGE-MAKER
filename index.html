@@ -171,6 +171,16 @@ html,button,select,label{touch-action:manipulation}
 .lay-gallery .p-foot .g-r b{font-size:calc(17px*var(--k,1));color:#ff2d86}
 .lay-gallery .p-foot .circle{width:calc(34px*var(--k,1));height:calc(34px*var(--k,1));border-radius:50%;background:#ff2d86;color:#fff;display:flex;align-items:center;justify-content:center;font-size:calc(16px*var(--k,1));font-weight:900}
 .lay-gallery.reels-safe .p-foot{padding-bottom:270px}
+/* 매거진 레이아웃: 베이지 바탕에 사진을 둥근 틀로 넣고, 아래에 라벨 · 명조 제목 · 작은 글씨 (카드 만들기와 같은 톤) */
+.p-mag{display:none}
+#posterRoot.lay-mag{background:#f6f1ec}
+.lay-mag .p-photo{flex:none;height:var(--mag-ph,800px);margin:calc(56px*var(--k,1)) calc(56px*var(--k,1)) 0;border-radius:calc(18px*var(--k,1));background:#ebe4dd}
+.lay-mag .p-scrim,.lay-mag .p-text,.lay-mag .p-topshade,.lay-mag .p-brand{display:none!important}
+.lay-mag .p-mag{display:block;flex:1;min-height:0;overflow:hidden;padding:calc(54px*var(--k,1)) calc(92px*var(--k,1)) 0;color:#221e20}
+.p-mag .m-label{font-size:24px;font-weight:700;letter-spacing:.25em;color:#d6246f;margin-bottom:.9em}
+.p-mag .m-title{font-family:"Noto Serif KR","Noto Sans KR",serif;font-size:76px;font-weight:700;line-height:1.2;letter-spacing:-.02em;white-space:pre-wrap}
+.p-mag .m-sub{font-size:30px;opacity:.62;margin-top:.6em;line-height:1.45;white-space:pre-wrap;letter-spacing:.01em}
+.lay-mag.reels-safe .p-foot{padding-bottom:252px}
 
 /* 피드 미리보기 */
 .feed-ov{position:fixed;inset:0;z-index:150;background:rgba(20,20,24,.92);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -378,8 +388,12 @@ html,button,select,label{touch-action:manipulation}
     <div class="field"><label>글자 크기</label><div class="seg" id="f_size"><button type="button" data-v="0.8">작게</button><button type="button" data-v="1" class="on">보통</button><button type="button" data-v="1.25">크게</button></div></div>
     <div class="field">
       <label>레이아웃</label>
-      <div class="seg" id="f_layout"><button type="button" data-v="basic" class="on">COLOR.M 로고</button><button type="button" data-v="gallery">메이커 갤러리</button></div>
-      <p class="hint">'메이커 갤러리'는 갤러리 SNS 이미지와 같은 모양이에요 (하단에 메이커 이름 · COLOR.M MAKER GALLERY)</p>
+      <div class="seg" id="f_layout"><button type="button" data-v="basic" class="on">COLOR.M 로고</button><button type="button" data-v="magazine">매거진</button><button type="button" data-v="gallery">메이커 갤러리</button></div>
+      <p class="hint">'매거진'은 베이지 바탕에 사진을 틀로 넣고 아래에 제목을 써요. 피드 색감을 하나로 맞출 때 좋아요 (카드 만들기와 같은 톤)<br>'메이커 갤러리'는 갤러리 SNS 이미지와 같은 모양이에요 (하단에 메이커 이름 · COLOR.M MAKER GALLERY)</p>
+      <div id="magOpts" hidden>
+        <label style="margin-top:10px">위쪽 작은 영문 라벨</label>
+        <input id="f_magLabel" value="COLOR.M" placeholder="예: COLOR.M CLASS · PERSONAL COLOR">
+      </div>
       <div id="galleryOpts" hidden>
         <label style="margin-top:10px">메이커 이름</label>
         <select id="f_maker"><option>Character Maker</option><option>Product Prompt Maker</option><option>Picture Book Maker</option><option value="custom">직접 입력</option></select>
@@ -409,6 +423,7 @@ html,button,select,label{touch-action:manipulation}
           <div class="p-brand" id="o_brand" hidden><div class="bar"></div><div class="names"><b>COLOR.M</b><small id="o_brandSub">AI MAKER GALLERY</small><em id="o_brandAi">AI-GENERATED IMAGE</em></div></div>
           <div class="p-text"><div class="p-title" id="o_title"></div><div class="p-sub" id="o_sub"></div></div>
         </div>
+        <div class="p-mag" id="o_mag"><div class="m-label" id="o_magLabel"></div><div class="m-title"></div><div class="m-sub"></div></div>
         <div class="p-foot" id="o_foot"><img src="logo-colorm.png" alt="COLOR.M"><div class="r" id="o_footText"></div><div class="g-l">Made with <b id="o_maker">Character Maker</b></div><div class="g-r"><b>COLOR.M MAKER GALLERY</b><span class="circle">M</span></div></div>
       </div>
     </div>
@@ -559,11 +574,27 @@ function applyRatio(){
   const s = (wide ? 1.05 : Math.min(r.h / REF_H, 1.15)) * textScale;
   $("o_title").style.fontSize = (BASE_TITLE_SIZE * s) + "px";
   $("o_sub").style.fontSize = (BASE_SUB_SIZE * s) + "px";
+  const mq = c => root.querySelector(".p-mag " + c);
+  mq(".m-title").style.fontSize = (76 * s) + "px";
+  mq(".m-sub").style.fontSize = (30 * s) + "px";
+  mq(".m-label").style.fontSize = (24 * Math.min(s, 1.1)) + "px";
+  setMagSize();
 }
 
 const TOP_BIAS = 0.6; // 위아래가 잘릴 때 0 = 가운데, 1 = 사진 맨 위에 맞춤
 /* 사진이 보이는 칸 = 전체에서 하단 흰 띠를 뺀 부분 */
-function photoBox(){ const r = ratio(); return {w:r.w, h:r.h - $("o_foot").offsetHeight}; }
+function photoBox(){
+  const r = ratio();
+  if($("posterRoot").classList.contains("lay-mag")){ const m = magBox(); return {w:m.w, h:m.h}; }
+  return {w:r.w, h:r.h - $("o_foot").offsetHeight};
+}
+/* 매거진: 사진 틀 = 사방 56px 여백, 아래쪽 약 1/3은 글자 자리 */
+function magBox(){
+  const r = ratio(), k = parseFloat($("posterRoot").style.getPropertyValue("--k")) || 1, pad = 56 * k;
+  const avail = r.h - $("o_foot").offsetHeight;
+  return {w:r.w - pad * 2, h:Math.round(avail * 0.67 - pad)};
+}
+function setMagSize(){ $("posterRoot").style.setProperty("--mag-ph", magBox().h + "px"); }
 function fitPhoto(p){
   const box = photoBox();
   /* 카드는 칸 크기에 딱 맞게 그려져 있으니 그대로 (더 키우거나 줄이지 않음) */
@@ -685,6 +716,13 @@ function fillText(root, i){
   q(".p-foot .r").textContent = foot;
   q(".p-foot .r").style.display = foot ? "" : "none";
   q(".p-foot").classList.toggle("solo", !foot);
+  /* 매거진 레이아웃 글자 (사진 아래) */
+  const label = $("f_magLabel").value.trim();
+  q(".p-mag .m-label").textContent = label;
+  q(".p-mag .m-label").style.display = label ? "" : "none";
+  q(".p-mag .m-title").textContent = title;
+  q(".p-mag .m-sub").textContent = sub;
+  q(".p-mag .m-sub").style.display = sub ? "" : "none";
 }
 function syncText(){ fillText($("posterRoot"), Math.max(cur, 0)); }
 /* 입력칸에 지금 편집 중인 글자를 보여줌 (장마다 다르게면 현재 사진의 글자) */
@@ -1475,6 +1513,7 @@ function posterFontsReady(){
   if(!document.fonts) return Promise.resolve();
   const text = photos.map((_, i) => textOf(i).title + textOf(i).sub).join("") + shared.title + shared.sub + $("f_foot").value;
   const loads = [400, 600, 700, 900].map(w => document.fonts.load(`${w} 24px "Noto Sans KR"`, text || "가"));
+  loads.push(document.fonts.load(`700 24px "Noto Serif KR"`, text || "가")); // 매거진 제목
   return Promise.race([Promise.all(loads), new Promise(r => setTimeout(r, 3000))]).catch(() => {});
 }
 function baseName(){
@@ -1576,7 +1615,7 @@ async function collectWork(){
       pos:segVal("f_pos"), align:segVal("f_align"), size:segVal("f_size"), textOn:segVal("f_textOn"),
       shared:{...shared}, foot:$("f_foot").value,
       blurType:segVal("f_blurType"), blurShape:segVal("f_blurShape"), blurLevel,
-      layout:segVal("f_layout"), maker:$("f_maker").value, makerCustom:$("f_makerCustom").value,
+      layout:segVal("f_layout"), maker:$("f_maker").value, makerCustom:$("f_makerCustom").value, magLabel:$("f_magLabel").value,
       brand:$("f_brand").checked, aiMark:$("f_aiMark").checked
     },
     photos:await Promise.all(photos.map(async p => ({
@@ -1610,6 +1649,7 @@ async function restoreWork(w){
     shared.title = s.shared.title || ""; shared.sub = s.shared.sub || "";
     $("f_foot").value = s.foot || "";
     setSegUI("f_layout", s.layout || "basic");
+    $("f_magLabel").value = s.magLabel ?? "COLOR.M";
     $("f_maker").value = s.maker || "Character Maker"; $("f_makerCustom").value = s.makerCustom || "";
     $("f_brand").checked = !!s.brand; $("f_aiMark").checked = !!s.aiMark;
     applyLayout();
@@ -2168,8 +2208,11 @@ $("cardSave").onclick = async () => {
 
 /* ---------- 레이아웃: COLOR.M 로고 / 메이커 갤러리 + 왼쪽 위 COLOR.M·AI 표시 ---------- */
 function applyLayout(){
-  const gallery = segVal("f_layout") === "gallery";
+  const gallery = segVal("f_layout") === "gallery", mag = segVal("f_layout") === "magazine";
   root.classList.toggle("lay-gallery", gallery);
+  root.classList.toggle("lay-mag", mag);
+  $("magOpts").hidden = !mag;
+  setMagSize();
   $("galleryOpts").hidden = !gallery;
   $("footField").hidden = gallery; // 갤러리 하단은 정해진 문구라 '하단 오른쪽 문구'는 안 씀
   const custom = $("f_maker").value === "custom";
@@ -2183,9 +2226,11 @@ function applyLayout(){
 }
 wireSeg("f_layout", v => {
   if(v === "gallery"){ $("f_brand").checked = true; $("f_aiMark").checked = true; }
+  if(v === "magazine"){ $("f_brand").checked = false; $("f_aiMark").checked = false; }
   applyLayout();
   photos.forEach(fitPhoto); show(cur); // 하단 띠 높이가 바뀌니 사진 다시 맞춤
 });
+$("f_magLabel").addEventListener("input", syncText);
 $("f_maker").addEventListener("change", applyLayout);
 $("f_makerCustom").addEventListener("input", applyLayout);
 $("f_brand").addEventListener("change", () => { if(!$("f_brand").checked) $("f_aiMark").checked = false; applyLayout(); autoRefit(); });
