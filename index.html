@@ -173,7 +173,10 @@ html,button,select,label{touch-action:manipulation}
 .lay-gallery.reels-safe .p-foot{padding-bottom:270px}
 /* 매거진 레이아웃: 베이지 바탕에 사진을 둥근 틀로 넣고, 아래에 라벨 · 명조 제목 · 작은 글씨 (카드 만들기와 같은 톤) */
 .adj-grid{display:grid;grid-template-columns:44px 1fr 30px;align-items:center;gap:4px 8px;font-size:12.5px;margin-bottom:6px}
-.adj-grid input{width:100%;padding:0;border:0}
+.adj-grid input{width:100%;padding:0;border:0;position:relative;z-index:1;background:transparent;accent-color:var(--a);display:block}
+/* 가운데(0) 눈금 */
+.adj-r{position:relative;display:block;font-style:normal}
+.adj-r::before{content:"";position:absolute;left:50%;top:50%;width:2px;height:18px;margin:-9px 0 0 -1px;background:#8f8791;border-radius:1px}
 .adj-grid b{color:var(--a);text-align:right;font-size:12px}
 .p-mag{display:none}
 #posterRoot.lay-mag{background:#f6f1ec}
@@ -354,13 +357,13 @@ html,button,select,label{touch-action:manipulation}
     <div class="field" id="adjField" hidden>
       <label>밝기 · 색 보정 <span id="adjFor"></span></label>
       <div class="adj-grid">
-        <span>밝기</span><input type="range" id="adj_bri" min="-50" max="50" value="0"><b id="adj_briOut">0</b>
-        <span>대비</span><input type="range" id="adj_con" min="-50" max="50" value="0"><b id="adj_conOut">0</b>
-        <span>채도</span><input type="range" id="adj_sat" min="-50" max="50" value="0"><b id="adj_satOut">0</b>
-        <span>색온도</span><input type="range" id="adj_warm" min="-50" max="50" value="0"><b id="adj_warmOut">0</b>
+        <span>밝기</span><i class="adj-r"><input type="range" id="adj_bri" min="-50" max="50" value="0"></i><b id="adj_briOut">0</b>
+        <span>대비</span><i class="adj-r"><input type="range" id="adj_con" min="-50" max="50" value="0"></i><b id="adj_conOut">0</b>
+        <span>채도</span><i class="adj-r"><input type="range" id="adj_sat" min="-50" max="50" value="0"></i><b id="adj_satOut">0</b>
+        <span>색온도</span><i class="adj-r"><input type="range" id="adj_warm" min="-50" max="50" value="0"></i><b id="adj_warmOut">0</b>
       </div>
       <div class="order"><button type="button" id="adjReset">↺ 원래대로</button><button type="button" id="adjAll" hidden>이 보정을 모든 사진에</button></div>
-      <p class="hint">색온도는 왼쪽이 푸르게(차갑게), 오른쪽이 노랗게(따뜻하게)예요. 피드 색감을 맞출 때 살짝만 움직여 보세요</p>
+      <p class="hint">가운데 눈금이 원래 사진(0)이에요. 막대를 두 번 누르면 0으로 돌아가요<br>색온도는 왼쪽이 푸르게(차갑게), 오른쪽이 노랗게(따뜻하게)예요. 피드 색감을 맞출 때 살짝만 움직여 보세요</p>
     </div>
     <div class="field" id="blurField" hidden>
       <label>얼굴 가리기 <span id="blurFor"></span></label>
@@ -1237,6 +1240,8 @@ ADJ_KEYS.forEach(k => $("adj_" + k).addEventListener("input", () => {
   $("adj_" + k + "Out").textContent = p.adj[k];
   clearTimeout(adjTimer); adjTimer = setTimeout(() => rebuild(p), 120); // 끄는 동안은 너무 자주 다시 그리지 않게
 }));
+/* 막대를 두 번 누르면 0(원래대로) */
+ADJ_KEYS.forEach(k => $("adj_" + k).addEventListener("dblclick", () => { $("adj_" + k).value = 0; $("adj_" + k).dispatchEvent(new Event("input")); }));
 $("adjReset").onclick = () => { const p = P(); if(!p) return; p.adj = null; loadAdjInputs(); rebuild(p); };
 $("adjAll").onclick = () => { const a = P()?.adj; photos.forEach(p => { if(p !== P() && !p.card){ p.adj = a ? {...a} : null; rebuild(p); } }); };
 
