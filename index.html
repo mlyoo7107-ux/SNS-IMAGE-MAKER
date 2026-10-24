@@ -1945,7 +1945,7 @@ function renderCardNode(node, d, W, H){
       const parts = (c.n || "").split(/\s*\/\s*/);
       const brand = parts.length > 1 ? parts[0] : "", shadeName = parts.length > 1 ? parts.slice(1).join(" ") : parts[0];
       const img = photo
-        ? `<img class="lipph" src="${lipPhotoURL(c.c, c.picked)}" alt="" style="width:${lipW}px;height:${lipW * ratio}px">`
+        ? `<img class="lipph" src="${c.img || lipPhotoURL(c.c, c.picked)}" alt="" style="width:${lipW}px;height:${lipW * ratio}px">`
         : `<img class="lip" src="${lipDataURL(c.c)}" alt="" style="width:${lipW}px;height:${lipW * ratio}px">`;
       return `<div class="cn-row">${img}<div class="tx">${brand ? `<div class="br">${escH(brand)}</div>` : ""}<div class="sh">${escH(shadeName)}</div>${d.hex ? `<div class="hx">${escH(c.c.toUpperCase())}</div>` : ""}</div></div>`;
     }).join("");
