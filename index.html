@@ -116,6 +116,11 @@ html,button,select,label{touch-action:manipulation}
 .shade-none .p-scrim{display:none!important}
 .tc-dark .p-title,.tc-dark .p-sub,.tc-pink .p-sub{color:#171512;text-shadow:none}
 .tc-pink .p-title{color:#ff2d86;text-shadow:none}
+/* 후기 캡처: 카드·매거진과 같은 톤 (명조 제목 + 딥 마젠타, 작은 글씨는 따뜻한 회색) */
+.pre-review .p-title{font-family:"Noto Serif KR","Noto Sans KR",serif;font-weight:700;letter-spacing:.06em;color:#d6246f}
+.pre-review .p-sub{font-weight:400;color:#6b6366;opacity:1}
+.bg-dark.pre-review .p-title{color:#ff8fbd}
+.bg-dark.pre-review .p-sub{color:#e9e2df}
 .pos-top .p-text{top:calc(56px*var(--k,1));bottom:auto}
 /* 릴스 표지(9:16) 피드 격자 맞춤: 피드에선 가운데 3:4(위아래 240px씩 잘림)만 보이니
    로고 띠를 아래로 240px 늘려 로고가 보이는 영역 안에 오게, 위쪽 글자도 240px 내림 */
@@ -1148,6 +1153,7 @@ wireSeg("f_preset", v => {
     if(photos[0]) recommendRatio(photos[0]);
   }
   applyRatio();
+  root.classList.toggle("pre-review", v === "review");
   if(v === "review"){
     pickSeg("f_fit", "contain"); pickSeg("f_bgMode", reviewBg); pickSeg("f_textColor", "pink"); pickSeg("f_shade", "none");
     $("reviewBgRow").hidden = false;
@@ -1731,7 +1737,7 @@ async function restoreWork(w){
     setSegUI("f_blurType", s.blurType); blurType = s.blurType;
     setSegUI("f_blurShape", s.blurShape); blurShape = s.blurShape;
     blurLevel = s.blurLevel; $("f_blurLevel").value = s.blurLevel; $("blurLevelOut").textContent = s.blurLevel;
-    root.className = [`pos-${s.pos}`, `align-${s.align}`, s.bg !== "blur" ? `bg-${s.bg}` : "", s.textColor !== "white" ? `tc-${s.textColor}` : "", s.shade !== "strong" ? `shade-${s.shade}` : ""].filter(Boolean).join(" ");
+    root.className = [`pos-${s.pos}`, `align-${s.align}`, s.bg !== "blur" ? `bg-${s.bg}` : "", s.textColor !== "white" ? `tc-${s.textColor}` : "", s.shade !== "strong" ? `shade-${s.shade}` : "", s.preset === "review" ? "pre-review" : ""].filter(Boolean).join(" ");
     shared.title = s.shared.title || ""; shared.sub = s.shared.sub || "";
     $("f_foot").value = s.foot || "";
     setSegUI("f_layout", s.layout || "basic");
