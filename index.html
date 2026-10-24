@@ -2081,7 +2081,7 @@ function renderCardNode(node, d, W, H){
   const bg = d.bg === "auto" ? (d.type === "palette" ? "#f6f1ec" : "#f9f2f1") : d.bg;
   node.style.background = bg;
   node.classList.toggle("dark", lum(bg) < 0.45);
-  const head = `<div class="cn-head">${d.label ? `<div class="cn-label">${escH(d.label)}</div>` : ""}<div class="cn-title">${escH(d.title)}</div>${d.sub && d.type !== "text" ? `<div class="cn-sub">${escH(d.sub)}</div>` : ""}</div><div class="cn-rule"></div>`;
+  const head = `<div class="cn-head">${d.label ? `<div class="cn-label">${escH(d.label)}</div>` : ""}<div class="cn-title">${escH(d.title)}</div>${d.sub ? `<div class="cn-sub">${escH(d.sub)}</div>` : ""}</div><div class="cn-rule"></div>`;
   const note = d.note ? `<div class="cn-note">${escH(d.note)}</div>` : "";
   if(d.type === "text"){
     node.classList.add("t-text");
@@ -2184,7 +2184,7 @@ function renderColorRows(){
 function syncCardForm(){
   const d = cardEd.data, pal = d.type === "palette";
   setSegUI("f_cardType", d.type); setSegUI("f_cardBg", d.bg); setSegUI("f_cardShape", d.shape || "circle");
-  $("cardPaletteFields").hidden = $("cardColorsField").hidden = $("cardSubField").hidden = !pal;
+  $("cardPaletteFields").hidden = $("cardColorsField").hidden = !pal; // 부제는 텍스트 카드에서도 씀 (행사 주최 등)
   $("cardBodyField").hidden = pal;
   $("c_note").value = d.note || "";
   $("c_label").value = d.label; $("c_title").value = d.title; $("c_sub").value = d.sub; $("c_body").value = d.body; $("c_hex").checked = d.hex;
