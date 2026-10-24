@@ -103,9 +103,10 @@ html,button,select,label{touch-action:manipulation}
 /* 글자 위치: 위 · 가운데 · 아래(기본). 어두운 덮개도 글자 쪽으로 따라감 */
 .seg .sw{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid #ccc;margin-right:6px;vertical-align:-1px}
 .bg-white .p-photo{background:#fff}
-.bg-dark .p-photo{background:#2d2a2e}
-.bg-gray .p-photo{background:#e6e6ea}
-.bg-pink .p-photo{background:#fde7f0}
+/* 빈 곳 배경: 브랜드 톤(베이지·로즈)에 맞춘 색. 저장 파일 호환 때문에 값 이름은 gray=베이지, pink=로즈 그대로 */
+.bg-dark .p-photo{background:#332e2c}
+.bg-gray .p-photo{background:#f6f1ec}
+.bg-pink .p-photo{background:#f2e1de}
 .p-main.card{border-radius:22px;box-shadow:0 14px 40px rgba(0,0,0,.22)}
 .bg-white .p-main.card{box-shadow:0 10px 34px rgba(0,0,0,.14);outline:1px solid #ececf0}
 /* 차콜 배경에선 분홍 제목 아래 작은 글씨를 흰색으로 */
@@ -338,9 +339,9 @@ html,button,select,label{touch-action:manipulation}
         <label style="margin-top:10px">후기 배경</label>
         <div class="seg" id="f_reviewBg">
           <button type="button" data-v="white" class="on"><span class="sw" style="background:#fff"></span>흰색</button>
-          <button type="button" data-v="gray"><span class="sw" style="background:#e6e6ea"></span>연그레이</button>
-          <button type="button" data-v="dark"><span class="sw" style="background:#2d2a2e"></span>차콜</button>
-          <button type="button" data-v="pink"><span class="sw" style="background:#fde7f0"></span>핑크</button>
+          <button type="button" data-v="gray"><span class="sw" style="background:#f6f1ec"></span>베이지</button>
+          <button type="button" data-v="pink"><span class="sw" style="background:#f2e1de"></span>로즈</button>
+          <button type="button" data-v="dark"><span class="sw" style="background:#332e2c"></span>차콜</button>
         </div>
         <p class="hint">고른 배경은 기억해 뒀다가 다음에도 써요</p>
       </div>
@@ -389,7 +390,7 @@ html,button,select,label{touch-action:manipulation}
       <label>사진 맞춤</label>
       <div class="seg" id="f_fit"><button type="button" data-v="cover" class="on">꽉 채우기</button><button type="button" data-v="contain">전체 넣기</button></div>
       <label style="margin-top:10px">빈 곳 배경</label>
-      <div class="seg" id="f_bgMode"><button type="button" data-v="white" class="on">흰색</button><button type="button" data-v="gray">연그레이</button><button type="button" data-v="dark">차콜</button><button type="button" data-v="pink">핑크</button><button type="button" data-v="blur">흐린<br>사진</button></div>
+      <div class="seg" id="f_bgMode"><button type="button" data-v="white" class="on"><span class="sw" style="background:#fff"></span>흰색</button><button type="button" data-v="gray"><span class="sw" style="background:#f6f1ec"></span>베이지</button><button type="button" data-v="pink"><span class="sw" style="background:#f2e1de"></span>로즈</button><button type="button" data-v="dark"><span class="sw" style="background:#332e2c"></span>차콜</button><button type="button" data-v="blur">흐린<br>사진</button></div>
       <p class="hint">후기 캡처처럼 비율이 안 맞는 사진은 '전체 넣기'로 하면 잘리지 않고, 남는 곳은 고른 배경으로 채워져요</p>
     </div>
     <div class="field"><label>확대 <span id="zoomFor"></span> <b id="zoomPct" style="float:right;color:var(--a)"></b></label><input type="range" id="f_zoom" min="100" max="250" value="100" style="width:100%;padding:0;border:0"><p class="hint">미리보기를 드래그하면 위치를 옮길 수 있어요. 많이 옮기고 싶으면 확대를 키우고, 왼쪽으로 줄이면 사진 전체가 들어가고 사방에 여백도 생겨요</p>
@@ -478,7 +479,7 @@ html,button,select,label{touch-action:manipulation}
       <div id="cardBodyField" hidden><label class="l">본문 <span style="font-weight:normal;color:var(--m)">(한 줄에 하나씩 · 01, 02 번호가 붙어요)</span></label><textarea id="c_body" placeholder="예:&#10;립은 MLBB 코랄로 생기 있게&#10;블러셔는 피치 톤으로&#10;골드 액세서리가 잘 어울려요"></textarea></div>
       <div><label class="l">아래 작은 메모 <span style="font-weight:normal;color:var(--m)">(선택)</span></label><input type="text" id="c_note" placeholder="예: * 컬러칩은 톤 느낌을 보여주는 참고 색이에요"></div>
       <div><label class="l">배경</label>
-        <div class="seg" id="f_cardBg"><button type="button" data-v="auto" class="on">자동</button><button type="button" data-v="#ffffff">흰색</button><button type="button" data-v="#faf6f0">크림</button><button type="button" data-v="#f0f0f3">연그레이</button><button type="button" data-v="#fdeef4">연핑크</button><button type="button" data-v="#2d2a2e">차콜</button></div>
+        <div class="seg" id="f_cardBg"><button type="button" data-v="auto" class="on">자동</button><button type="button" data-v="#ffffff"><span class="sw" style="background:#fff"></span>흰색</button><button type="button" data-v="#f6f1ec"><span class="sw" style="background:#f6f1ec"></span>베이지</button><button type="button" data-v="#f2e1de"><span class="sw" style="background:#f2e1de"></span>로즈</button><button type="button" data-v="#332e2c"><span class="sw" style="background:#332e2c"></span>차콜</button></div>
         <p class="hint" style="font-size:11px;color:var(--m);margin:4px 0 0">'자동'은 컬러 팔레트면 첫 번째 색을 옅게, 텍스트면 연핑크로 깔아요</p>
       </div>
     </div>
