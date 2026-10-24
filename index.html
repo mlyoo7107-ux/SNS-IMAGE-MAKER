@@ -567,7 +567,9 @@ function photoBox(){ const r = ratio(); return {w:r.w, h:r.h - $("o_foot").offse
 function fitPhoto(p){
   const box = photoBox();
   /* 카드는 칸 크기에 딱 맞게 그려져 있으니 그대로 (더 키우거나 줄이지 않음) */
-  if(p.card){ p.baseW = box.w; p.baseH = box.h; p.zoom = 1; p.panX = 0; p.panY = 0; p.manual = false; return; }
+  /* 칸 크기에 딱 맞춰 만든 이미지(직접 디자인한 표지 등)도 마찬가지 */
+  const exact = Math.abs(p.naturalW - Math.round(box.w)) <= 1 && Math.abs(p.naturalH - Math.round(box.h)) <= 1;
+  if(p.card || exact){ p.baseW = box.w; p.baseH = box.h; p.zoom = 1; p.panX = 0; p.panY = 0; p.manual = false; return; }
   const sx = box.w / p.naturalW, sy = box.h / p.naturalH;
   /* 사진과 틀 모양이 비슷하면 15% 더 키워 옮길 여유를 줌. 이미 많이 잘리면 더 키우지 않음 */
   const extra = Math.max(sx, sy) / Math.min(sx, sy) >= 1.15 ? 1 : 1.15;
