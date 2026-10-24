@@ -15,7 +15,7 @@
 <meta name="twitter:image" content="https://mlyoo7107-ux.github.io/SNS-IMAGE-MAKER/og-image.png">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&family=Noto+Serif+KR:wght@600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 :root{--a:#ff2d86;--ab:#ffb3d1;--b:#f5f6fa;--l:#e2e5ee;--t:#171512;--m:#7a7268}
@@ -215,25 +215,44 @@ html,button,select,label{touch-action:manipulation}
 .card-foot button{flex:1}
 /* 카드 이미지 (1080px 기준으로 그림) */
 /* --s = 크기 배율 (3:4 기준 1, 정사각형·가로형은 작아짐) */
-.cardnode{font-family:"Noto Sans KR",sans-serif;box-sizing:border-box;display:flex;flex-direction:column;padding:calc(110px*var(--s,1)) calc(96px*var(--s,1));color:#171512;overflow:hidden}
-.cardnode.dark{color:#fff}
-.cn-label{display:inline-block;align-self:flex-start;background:#ff2d86;color:#fff;font-size:calc(30px*var(--s,1));font-weight:900;letter-spacing:calc(3px*var(--s,1));padding:calc(10px*var(--s,1)) calc(24px*var(--s,1));border-radius:calc(40px*var(--s,1));margin-bottom:calc(34px*var(--s,1))}
-.cn-head{display:flex;gap:calc(28px*var(--s,1));align-items:stretch;flex:none}
-.cn-bar{width:calc(12px*var(--s,1));border-radius:calc(6px*var(--s,1));background:#ff2d86;flex:none}
-.cn-title{font-size:calc(88px*var(--s,1));font-weight:900;line-height:1.18;white-space:pre-wrap;letter-spacing:-1px}
-.cn-sub{font-size:calc(38px*var(--s,1));font-weight:600;opacity:.75;margin-top:calc(14px*var(--s,1));white-space:pre-wrap}
-.cn-grid{flex:1;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;margin-top:calc(40px*var(--s,1))}
-/* 텍스트 카드: 라벨·제목·목록을 한 덩어리로 세로 가운데 */
-.cardnode.t-text{justify-content:center}
-.cardnode.t-text .cn-list{flex:none;justify-content:flex-start}
+/* 매거진 스타일: 작은 영문 라벨 + 단정한 제목 + 얇은 구분선 */
+.cardnode{font-family:"Noto Sans KR",sans-serif;box-sizing:border-box;display:flex;flex-direction:column;padding:calc(104px*var(--s,1)) calc(92px*var(--s,1)) calc(80px*var(--s,1));color:#221e20;overflow:hidden}
+.cardnode.dark{color:#f5f1ee}
+.cn-label{font-size:calc(24px*var(--s,1));font-weight:700;letter-spacing:calc(6px*var(--s,1));color:#d6246f;margin-bottom:calc(22px*var(--s,1))}
+.cardnode.dark .cn-label{color:#ff8fbd}
+.cn-head{flex:none}
+.cn-row .lipph{flex:none;display:block;border-radius:calc(18px*var(--s,1));box-shadow:0 calc(6px*var(--s,1)) calc(18px*var(--s,1)) rgba(0,0,0,.08)}
+/* 제목은 명조체(세리프)로 — 뷰티 매거진 느낌 */
+.cn-title{font-family:"Noto Serif KR","Noto Sans KR",serif;font-size:calc(76px*var(--s,1));font-weight:700;line-height:1.2;white-space:pre-wrap;letter-spacing:calc(-1.5px*var(--s,1))}
+.cn-sub{font-size:calc(30px*var(--s,1));font-weight:400;opacity:.62;margin-top:calc(16px*var(--s,1));white-space:pre-wrap;letter-spacing:calc(.5px*var(--s,1))}
+.cn-rule{height:calc(2px*var(--s,1));background:currentColor;opacity:.14;margin-top:calc(40px*var(--s,1));flex:none}
+.cn-note{flex:none;font-size:calc(21px*var(--s,1));opacity:.45;margin-top:calc(18px*var(--s,1));letter-spacing:calc(.3px*var(--s,1))}
+/* 동그라미 칩 (칸 배치) */
+.cn-grid{flex:1;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;margin-top:calc(30px*var(--s,1))}
 .cn-sw{display:flex;flex-direction:column;align-items:center;text-align:center}
-.cn-sw .dot{border-radius:50%;box-shadow:0 calc(12px*var(--s,1)) calc(30px*var(--s,1)) rgba(0,0,0,.16)}
-.cn-sw .nm{font-size:calc(36px*var(--s,1));font-weight:700;margin-top:calc(22px*var(--s,1));line-height:1.25;word-break:keep-all;white-space:pre-line}
-.cn-sw .lip{display:block;filter:drop-shadow(0 calc(8px*var(--s,1)) calc(14px*var(--s,1)) rgba(0,0,0,.12))}
-.cn-sw .hx{font-size:calc(25px*var(--s,1));font-weight:600;opacity:.55;margin-top:calc(6px*var(--s,1));letter-spacing:1px}
-.cn-list{list-style:none;margin:calc(56px*var(--s,1)) 0 0;padding:0;display:flex;flex-direction:column;gap:calc(30px*var(--s,1));flex:1;justify-content:center}
-.cn-list li{font-size:calc(44px*var(--s,1));font-weight:600;line-height:1.45;display:flex;gap:calc(22px*var(--s,1));word-break:keep-all}
-.cn-list li .b{flex:none;width:calc(18px*var(--s,1));height:calc(18px*var(--s,1));border-radius:50%;background:#ff2d86;margin-top:calc(23px*var(--s,1))}
+.cn-sw .dot{border-radius:50%;box-shadow:0 calc(10px*var(--s,1)) calc(26px*var(--s,1)) rgba(0,0,0,.12)}
+.cn-sw .nm{font-size:calc(32px*var(--s,1));font-weight:600;margin-top:calc(20px*var(--s,1));line-height:1.3;word-break:keep-all;white-space:pre-line}
+.cn-sw .hx{font-size:calc(22px*var(--s,1));font-weight:400;opacity:.5;margin-top:calc(6px*var(--s,1));letter-spacing:calc(1.5px*var(--s,1))}
+/* 입술 칩 (목록 배치): 왼쪽 입술 · 오른쪽 브랜드/호수, 줄 사이 얇은 선 */
+.cn-rows{flex:1;display:flex;flex-direction:column;justify-content:center}
+.cn-row{display:flex;align-items:center;gap:calc(52px*var(--s,1));padding:calc(10px*var(--s,1)) 0}
+.cn-row + .cn-row{border-top:calc(2px*var(--s,1)) solid rgba(34,30,32,.09)}
+.cardnode.dark .cn-row + .cn-row{border-top-color:rgba(255,255,255,.12)}
+.cn-row .lip{flex:none;display:block}
+.cn-row .tx{min-width:0}
+.cn-row .br{font-size:calc(25px*var(--s,1));font-weight:400;opacity:.55;letter-spacing:calc(.5px*var(--s,1));margin-bottom:calc(8px*var(--s,1))}
+.cn-row .sh{font-size:calc(40px*var(--s,1));font-weight:700;line-height:1.25;letter-spacing:calc(-.5px*var(--s,1));word-break:keep-all}
+.cn-row .hx{font-size:calc(22px*var(--s,1));opacity:.45;margin-top:calc(8px*var(--s,1));letter-spacing:calc(1.5px*var(--s,1))}
+.cn-rows.two{display:grid;grid-template-columns:1fr 1fr;column-gap:calc(48px*var(--s,1));align-content:center}
+.cn-rows.two .cn-row{border-top:0!important}
+/* 텍스트 카드: 01·02 번호 목록, 한 덩어리로 세로 가운데 */
+.cardnode.t-text{justify-content:center}
+.cn-list{list-style:none;margin:calc(44px*var(--s,1)) 0 0;padding:0;display:flex;flex-direction:column}
+.cn-list li{font-size:calc(38px*var(--s,1));font-weight:400;line-height:1.5;display:flex;gap:calc(30px*var(--s,1));word-break:keep-all;padding:calc(26px*var(--s,1)) 0}
+.cn-list li + li{border-top:calc(2px*var(--s,1)) solid rgba(34,30,32,.09)}
+.cardnode.dark .cn-list li + li{border-top-color:rgba(255,255,255,.12)}
+.cn-list li .no{flex:none;font-size:calc(26px*var(--s,1));font-weight:700;color:#d6246f;letter-spacing:calc(2px*var(--s,1));margin-top:calc(10px*var(--s,1))}
+.cardnode.dark .cn-list li .no{color:#ff8fbd}
 .feed-foot .hint{font-size:11px;color:var(--m);margin:0;text-align:center;line-height:1.5}
 .resume{background:#fff5fa;border:1.5px solid var(--ab);border-radius:12px;padding:12px 14px;font-size:13px}
 .resume span{display:block;color:var(--m);font-size:11.5px;margin-top:2px}
@@ -400,7 +419,7 @@ html,button,select,label{touch-action:manipulation}
         <label class="l">계절 예시로 채우기 <span style="font-weight:normal;color:var(--m)">(립 컬러 예시 · 고쳐 쓰세요)</span></label>
         <div class="season-row" id="seasonRow"><button type="button" data-s="spring">🌸 봄 웜</button><button type="button" data-s="summer">🌊 여름 쿨</button><button type="button" data-s="autumn">🍂 가을 웜</button><button type="button" data-s="winter">❄️ 겨울 쿨</button></div>
       </div>
-      <div id="cardLabelField" hidden><label class="l">작은 라벨 <span style="font-weight:normal;color:var(--m)">(선택)</span></label><input type="text" id="c_label" placeholder="예: COLOR TIP"></div>
+      <div id="cardLabelField"><label class="l">작은 영문 라벨 <span style="font-weight:normal;color:var(--m)">(선택 · 제목 위에 작게)</span></label><input type="text" id="c_label" placeholder="예: WINTER · VIVID / COLOR TIP"></div>
       <div><label class="l">제목</label><textarea id="c_title" rows="2" style="min-height:62px" placeholder="예: 가을 웜톤"></textarea></div>
       <div id="cardSubField"><label class="l">부제 <span style="font-weight:normal;color:var(--m)">(선택)</span></label><input type="text" id="c_sub" placeholder="예: 추천 립 컬러"></div>
       <div id="cardColorsField">
@@ -409,10 +428,11 @@ html,button,select,label{touch-action:manipulation}
         <div class="order"><button type="button" id="colorAdd">＋ 색 추가</button></div>
         <label class="chk"><input type="checkbox" id="c_hex" checked> 색상 코드(HEX) 표시</label>
         <label class="l" style="margin-top:10px">컬러칩 모양</label>
-        <div class="seg" id="f_cardShape"><button type="button" data-v="lip" class="on">💋 입술</button><button type="button" data-v="circle">⚪ 동그라미</button></div>
+        <div class="seg" id="f_cardShape"><button type="button" data-v="photo" class="on">📷 실사 입술</button><button type="button" data-v="lip">💋 그림 입술</button><button type="button" data-v="circle">⚪ 동그라미</button></div>
         <p class="hint" style="font-size:11px;color:var(--m);margin:4px 0 0">색 이름 칸에서 줄을 바꾸려면 ' / '를 쓰세요 (예: 롬앤 쥬시 래스팅 / 10 베어 애프리콧)</p>
       </div>
-      <div id="cardBodyField" hidden><label class="l">본문 <span style="font-weight:normal;color:var(--m)">(한 줄에 하나씩 · 앞에 • 가 붙어요)</span></label><textarea id="c_body" placeholder="예:&#10;립은 MLBB 코랄로 생기 있게&#10;블러셔는 피치 톤으로&#10;골드 액세서리가 잘 어울려요"></textarea></div>
+      <div id="cardBodyField" hidden><label class="l">본문 <span style="font-weight:normal;color:var(--m)">(한 줄에 하나씩 · 01, 02 번호가 붙어요)</span></label><textarea id="c_body" placeholder="예:&#10;립은 MLBB 코랄로 생기 있게&#10;블러셔는 피치 톤으로&#10;골드 액세서리가 잘 어울려요"></textarea></div>
+      <div><label class="l">아래 작은 메모 <span style="font-weight:normal;color:var(--m)">(선택)</span></label><input type="text" id="c_note" placeholder="예: * 컬러칩은 톤 느낌을 보여주는 참고 색이에요"></div>
       <div><label class="l">배경</label>
         <div class="seg" id="f_cardBg"><button type="button" data-v="auto" class="on">자동</button><button type="button" data-v="#ffffff">흰색</button><button type="button" data-v="#faf6f0">크림</button><button type="button" data-v="#f0f0f3">연그레이</button><button type="button" data-v="#fdeef4">연핑크</button><button type="button" data-v="#2d2a2e">차콜</button></div>
         <p class="hint" style="font-size:11px;color:var(--m);margin:4px 0 0">'자동'은 컬러 팔레트면 첫 번째 색을 옅게, 텍스트면 연핑크로 깔아요</p>
@@ -1689,25 +1709,125 @@ const escH = s => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").r
 /* 입술 모양 컬러칩 — 캔버스로 그려 이미지로 넣음 (저장 이미지 도구가 SVG를 불안정하게 그려서) */
 const lipCache = new Map();
 function shade(h, f){ return rgbHex(hexRGB(h).map(c => f < 0 ? c * (1 + f) : c + (255 - c) * f)); } // f<0 어둡게, f>0 밝게
+/* ---- 실사 입술: 입술 사진 한 장(lip-photo.jpg)을 틀로, 입술 부분만 원하는 색으로 다시 칠함 ----
+   빨간 입술 사진이라 '빨간 정도'로 입술 영역을 찾고, 원래 밝기 무늬(주름·광택)는 살린 채 색만 바꿈 */
+let lipTpl = null; // {w, h, data, raw(입술 정도), mask(부드럽게 넓힌 영역), meanL}
+const LIP_PHOTO_RATIO = 340 / 430;
+const lipTplReady = new Promise(res => {
+  const im = new Image();
+  im.onload = () => {
+    try{
+      const w = im.naturalWidth, h = im.naturalHeight, N = w * h;
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      const g = c.getContext("2d"); g.drawImage(im, 0, 0);
+      const data = g.getImageData(0, 0, w, h).data;
+      const raw = new Float32Array(N), wide = new Float32Array(N);
+      let sumL = 0, cnt = 0;
+      for(let i = 0; i < N; i++){
+        const r = data[i * 4], gg = data[i * 4 + 1], b = data[i * 4 + 2], sc = r - Math.max(gg, b);
+        raw[i] = Math.max(0, Math.min(1, (sc - 95) / 50));
+        wide[i] = Math.max(0, Math.min(1, (sc - 78) / 45));
+        if(raw[i] > 0.9){ sumL += 0.299 * r + 0.587 * gg + 0.114 * b; cnt++; }
+      }
+      /* 가장자리에 원래 빨간색이 남지 않게 2px 넓히고 부드럽게 */
+      const pass = (src, rad, fn) => { const o = new Float32Array(N); for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){ let acc = fn === "max" ? 0 : 0, n = 0; for(let dy = -rad; dy <= rad; dy++) for(let dx = -rad; dx <= rad; dx++){ const xx = x + dx, yy = y + dy; if(xx < 0 || yy < 0 || xx >= w || yy >= h) continue; const v = src[yy * w + xx]; if(fn === "max"){ if(v > acc) acc = v; } else { acc += v; n++; } } o[y * w + x] = fn === "max" ? acc : acc / n; } return o; };
+      const mask = pass(pass(wide, 2, "max"), 2, "avg");
+      lipTpl = {w, h, data, raw, mask, meanL: sumL / (cnt || 1)};
+    }catch(e){ lipTpl = null; }
+    res();
+  };
+  im.onerror = () => res();
+  im.src = "lip-photo.jpg";
+});
+/* RGB ↔ HSL (0~1) */
+function rgbHSL([r, g, b]){
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  if(mx === mn) return [0, 0, l];
+  const d = mx - mn, s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+  const h = mx === r ? ((g - b) / d + (g < b ? 6 : 0)) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h / 6, s, l];
+}
+function hslRGB(h, s, l){
+  if(!s) return [l * 255, l * 255, l * 255];
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+  const f = t => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  return [f(h + 1 / 3) * 255, f(h) * 255, f(h - 1 / 3) * 255];
+}
+const lipPhotoCache = new Map();
+function lipPhotoURL(hex){
+  if(!lipTpl) return lipDataURL(hex);
+  if(lipPhotoCache.has(hex)) return lipPhotoCache.get(hex);
+  const {w, h, data, raw, mask, meanL} = lipTpl, t = hexRGB(hex);
+  /* 밝은 색일수록 그늘을 약하게 (빨간 틀의 진한 그늘이 밝은 색에선 탁한 회색으로 보여서) */
+  const tL = (0.299 * t[0] + 0.587 * t[1] + 0.114 * t[2]) / 255;
+  const shadowPow = 1.1 - 0.75 * Math.max(0, tL - 0.3);
+  const [tH, tS, tLL] = rgbHSL(t);
+  const out = new ImageData(w, h), o = out.data;
+  for(let i = 0; i < w * h; i++){
+    const r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2], a = mask[i];
+    if(a <= 0){ o[i * 4] = r; o[i * 4 + 1] = g; o[i * 4 + 2] = b; o[i * 4 + 3] = 255; continue; }
+    /* 원래 입술의 밝기 무늬를 새 색에 입힘 (입술 바깥으로 넓힌 부분은 무늬 없이 → 하얀 테두리 방지) */
+    let rr = (0.299 * r + 0.587 * g + 0.114 * b) / meanL;
+    rr = 1 + (rr - 1) * raw[i];
+    /* 그늘: 밝기만 낮추고 색감(채도)은 살짝 올려서 회색빛으로 탁해지지 않게 */
+    let nc;
+    if(rr <= 1){
+      const sh = Math.pow(rr, shadowPow);
+      /* 그냥 어둡게(회색빛)와 색감 살린 그늘(너무 쨍함)을 반반 섞음 */
+      const a1 = t.map(v => v * sh), a2 = hslRGB(tH, Math.min(1, tS * (1 + (1 - sh) * 0.25)), tLL * (0.35 + 0.65 * sh));
+      nc = a1.map((v, k) => v * 0.5 + a2[k] * 0.5);
+    }else nc = t.map(v => v + (255 - v) * Math.min(1, (rr - 1) * 0.9));
+    o[i * 4] = r * (1 - a) + nc[0] * a; o[i * 4 + 1] = g * (1 - a) + nc[1] * a; o[i * 4 + 2] = b * (1 - a) + nc[2] * a; o[i * 4 + 3] = 255;
+  }
+  const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").putImageData(out, 0, 0);
+  const url = c.toDataURL("image/jpeg", 0.92);
+  lipPhotoCache.set(hex, url);
+  return url;
+}
+/* 사실적인 입술: 큐피드 활 윗입술 + 도톰한 아랫입술, 그라데이션 음영, 은은한 광택 (200×110 좌표, 3배로 그림) */
+const LIP_RATIO = 0.55;
 function lipDataURL(hex){
   if(lipCache.has(hex)) return lipCache.get(hex);
-  const W = 400, H = 230, c = document.createElement("canvas"); c.width = W; c.height = H;
-  const g = c.getContext("2d"); g.scale(W / 200, W / 200); // 200×115 좌표로 그림
-  const upper = new Path2D("M8,58 C30,40 56,16 80,18 C90,19 95,26 100,29 C105,26 110,19 120,18 C144,16 170,40 192,58 C166,62 134,59 100,62 C66,59 34,62 8,58 Z");
-  const lower = new Path2D("M8,58 C34,62 66,59 100,62 C134,59 166,62 192,58 C174,90 142,108 100,108 C58,108 26,90 8,58 Z");
-  g.fillStyle = shade(hex, -0.1); g.fill(upper);
-  g.fillStyle = hex; g.fill(lower);
-  /* 아랫입술 아래쪽에 살짝 그늘 → 입체감 */
-  const gr = g.createLinearGradient(0, 70, 0, 108); gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(1, "rgba(0,0,0,.14)");
+  const S = 3, c = document.createElement("canvas"); c.width = 200 * S; c.height = 110 * S;
+  const g = c.getContext("2d"); g.scale(S, S);
+  const upper = new Path2D("M4,56 C20,48 40,30 62,23 C78,18 90,25 100,31 C110,25 122,18 138,23 C160,30 180,48 196,56 C172,58 140,57 100,60 C60,57 28,58 4,56 Z");
+  const lower = new Path2D("M4,56 C28,58 60,57 100,60 C140,57 172,58 196,56 C182,82 148,102 100,102 C52,102 18,82 4,56 Z");
+  const both = new Path2D(); both.addPath(upper); both.addPath(lower);
+  /* 윗입술: 위는 살짝 밝게, 입술 선 쪽은 어둡게 */
+  let gr = g.createLinearGradient(0, 18, 0, 60);
+  gr.addColorStop(0, shade(hex, 0.05)); gr.addColorStop(1, shade(hex, -0.24));
+  g.fillStyle = gr; g.fill(upper);
+  /* 아랫입술: 입술 선 바로 아래 그늘 → 가운데 본래 색 → 아래쪽 살짝 어둡게 */
+  gr = g.createLinearGradient(0, 58, 0, 102);
+  gr.addColorStop(0, shade(hex, -0.2)); gr.addColorStop(0.32, hex); gr.addColorStop(1, shade(hex, -0.14));
   g.fillStyle = gr; g.fill(lower);
-  /* 가운데 입술 선 */
-  g.strokeStyle = shade(hex, -0.42); g.lineWidth = 2.6; g.lineCap = "round";
-  g.stroke(new Path2D("M14,59 C40,64 70,61 100,64 C130,61 160,64 186,59"));
-  /* 윤기 (하이라이트) */
-  g.fillStyle = "rgba(255,255,255,.55)";
-  g.beginPath(); g.ellipse(64, 34, 13, 5, -0.35, 0, Math.PI * 2); g.fill();
-  g.fillStyle = "rgba(255,255,255,.32)";
-  g.beginPath(); g.ellipse(80, 84, 16, 5, -0.12, 0, Math.PI * 2); g.fill();
+  /* 아랫입술 볼륨 (가운데가 도톰해 보이게) */
+  g.save(); g.clip(lower); g.translate(100, 79); g.scale(1.75, 0.62);
+  gr = g.createRadialGradient(0, 0, 0, 0, 0, 56); gr.addColorStop(0, "rgba(255,255,255,.2)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = gr; g.fillRect(-60, -60, 120, 120); g.restore();
+  /* 입꼬리 그늘 */
+  g.save(); g.clip(both);
+  for(const x of [6, 194]){
+    gr = g.createRadialGradient(x, 57, 0, x, 57, 34); gr.addColorStop(0, "rgba(0,0,0,.3)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = gr; g.fillRect(x - 34, 23, 68, 68);
+  }
+  g.restore();
+  /* 가운데 입술 선: 넓고 옅은 그늘 위에 가는 선 */
+  const mid = new Path2D("M9,57 C40,59 70,58.5 100,61 C130,58.5 160,59 191,57");
+  g.lineCap = "round";
+  g.strokeStyle = shade(hex, -0.55); g.globalAlpha = 0.18; g.lineWidth = 4.5; g.stroke(mid);
+  g.globalAlpha = 0.6; g.lineWidth = 1.3; g.stroke(mid);
+  g.globalAlpha = 1;
+  /* 광택: 아랫입술에 부드럽게 번지는 하이라이트, 윗입술엔 아주 약하게 */
+  g.save(); g.clip(lower); g.translate(90, 80); g.scale(2.3, 0.5);
+  gr = g.createRadialGradient(0, 0, 0, 0, 0, 18); gr.addColorStop(0, "rgba(255,255,255,.55)"); gr.addColorStop(0.6, "rgba(255,255,255,.16)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = gr; g.fillRect(-20, -20, 40, 40); g.restore();
+  g.save(); g.clip(upper); g.translate(70, 37); g.rotate(-0.32); g.scale(2, 0.55);
+  gr = g.createRadialGradient(0, 0, 0, 0, 0, 10); gr.addColorStop(0, "rgba(255,255,255,.3)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = gr; g.fillRect(-12, -12, 24, 24); g.restore();
+  /* 입술 윤곽을 아주 옅게 */
+  g.strokeStyle = shade(hex, -0.3); g.globalAlpha = 0.22; g.lineWidth = 0.7; g.stroke(both); g.globalAlpha = 1;
   const url = c.toDataURL("image/png");
   lipCache.set(hex, url);
   return url;
@@ -1716,42 +1836,58 @@ function renderCardNode(node, d, W, H){
   const s = Math.min(W / 1080, H / 1250, 1.1);
   node.className = "cardnode";
   node.style.cssText = `width:${W}px;height:${H}px;--s:${s}`;
-  const bg = d.bg === "auto" ? (d.type === "palette" ? tint(d.colors[0]?.c || "#ff2d86", 0.86) : "#fdeef4") : d.bg;
+  /* 자동 배경: 시리즈가 통일돼 보이게 아이보리 계열 */
+  const bg = d.bg === "auto" ? (d.type === "palette" ? "#f6f1ec" : "#f9f2f1") : d.bg;
   node.style.background = bg;
   node.classList.toggle("dark", lum(bg) < 0.45);
+  const head = `<div class="cn-head">${d.label ? `<div class="cn-label">${escH(d.label)}</div>` : ""}<div class="cn-title">${escH(d.title)}</div>${d.sub && d.type !== "text" ? `<div class="cn-sub">${escH(d.sub)}</div>` : ""}</div><div class="cn-rule"></div>`;
+  const note = d.note ? `<div class="cn-note">${escH(d.note)}</div>` : "";
   if(d.type === "text"){
     node.classList.add("t-text");
     const lines = (d.body || "").split("\n").map(t => t.trim()).filter(Boolean);
-    node.innerHTML = (d.label ? `<div class="cn-label">${escH(d.label)}</div>` : "") +
-      `<div class="cn-head"><div class="cn-bar"></div><div><div class="cn-title">${escH(d.title)}</div></div></div>` +
-      `<ul class="cn-list">${lines.map(t => `<li><span class="b"></span><span>${escH(t)}</span></li>`).join("")}</ul>`;
+    node.innerHTML = head + `<ul class="cn-list">${lines.map((t, i) => `<li><span class="no">${String(i + 1).padStart(2, "0")}</span><span>${escH(t)}</span></li>`).join("")}</ul>` + note;
     return;
   }
   const cols0 = d.colors.filter(c => c.c);
-  node.innerHTML = `<div class="cn-head"><div class="cn-bar"></div><div><div class="cn-title">${escH(d.title)}</div>${d.sub ? `<div class="cn-sub">${escH(d.sub)}</div>` : ""}</div></div><div class="cn-grid"></div>`;
-  const grid = node.querySelector(".cn-grid"), n = cols0.length;
-  if(!n) return;
+  const n = cols0.length;
   const wide = W > H * 1.2;
-  /* 입술은 가로로 넓어서 칸 수를 적게: 1~2개는 세로로, 3~4개는 2칸, 5~6개는 3칸 */
-  const lipCols = n <= 2 ? 1 : n <= 4 ? 2 : 3;
-  const cols = wide ? n : d.shape === "lip" ? lipCols : n <= 3 ? n : n === 4 ? 2 : 3, rows = Math.ceil(n / cols);
-  /* 남은 공간에 맞춰 동그라미 크기 계산 */
-  const pad = 96 * s, gap = 40 * s;
-  const headH = node.querySelector(".cn-head").getBoundingClientRect().height / (node.getBoundingClientRect().height / H || 1);
-  const gw = W - pad * 2, gh = H - 110 * s * 2 - headH - 40 * s;
+  const kk = () => node.getBoundingClientRect().height / H || 1; // 미리보기 축소 배율 보정
+  if(d.shape === "lip" || d.shape === "photo"){
+    /* 목록형: 왼쪽 입술(실사 사진 또는 그림) · 오른쪽 브랜드(작게)/제품·호수(굵게) */
+    const photo = d.shape === "photo" && lipTpl;
+    node.innerHTML = head + `<div class="cn-rows${wide && n > 2 ? " two" : ""}"></div>` + note;
+    const box = node.querySelector(".cn-rows");
+    if(!n) return;
+    const perCol = wide && n > 2 ? Math.ceil(n / 2) : n;
+    const availH = box.getBoundingClientRect().height / kk();
+    const colW = (W - 92 * s * 2) / (wide && n > 2 ? 2 : 1);
+    const rowH = availH / perCol;
+    const ratio = photo ? LIP_PHOTO_RATIO : LIP_RATIO;
+    const lipW = Math.max(120 * s, Math.min((rowH - 24 * s) * (photo ? 0.9 : 0.86) / ratio, colW * (photo ? 0.44 : 0.42), (photo ? 360 : 330) * s));
+    box.innerHTML = cols0.map(c => {
+      const parts = (c.n || "").split(/\s*\/\s*/);
+      const brand = parts.length > 1 ? parts[0] : "", shadeName = parts.length > 1 ? parts.slice(1).join(" ") : parts[0];
+      const img = photo
+        ? `<img class="lipph" src="${lipPhotoURL(c.c)}" alt="" style="width:${lipW}px;height:${lipW * ratio}px">`
+        : `<img class="lip" src="${lipDataURL(c.c)}" alt="" style="width:${lipW}px;height:${lipW * ratio}px">`;
+      return `<div class="cn-row">${img}<div class="tx">${brand ? `<div class="br">${escH(brand)}</div>` : ""}<div class="sh">${escH(shadeName)}</div>${d.hex ? `<div class="hx">${escH(c.c.toUpperCase())}</div>` : ""}</div></div>`;
+    }).join("");
+    return;
+  }
+  node.innerHTML = head + `<div class="cn-grid"></div>` + note;
+  const grid = node.querySelector(".cn-grid");
+  if(!n) return;
+  /* 동그라미: 칸 배치. 남은 공간(그리드 영역)에 맞춰 크기 계산 */
+  const cols = wide ? n : n <= 3 ? n : n === 4 ? 2 : 3, rows = Math.ceil(n / cols);
+  const gap = 40 * s;
+  const gw = W - 92 * s * 2, gh = grid.getBoundingClientRect().height / kk();
   const cellW = (gw - gap * (cols - 1)) / cols;
-  const lips = d.shape === "lip";
-  const textH = (36 * 1.25 * 2 + 22 + (d.hex ? 25 * 1.4 + 6 : 0)) * s;
+  const textH = (32 * 1.3 * 2 + 20 + (d.hex ? 22 * 1.4 + 6 : 0)) * s;
   const cellH = (gh - gap * (rows - 1)) / rows;
-  const dot = Math.max(60 * s, Math.min(cellW * 0.82, cellH - textH, 300 * s));
+  const dot = Math.max(60 * s, Math.min(cellW * 0.78, cellH - textH, 280 * s));
   grid.style.gap = `${gap}px`;
-  /* 입술은 가로로 넓은 모양(가로:세로 = 200:115)이라 칸 폭에 맞춰 크기 계산 */
-  const lipW = Math.max(100 * s, Math.min(cellW * 0.94, (cellH - textH) / 0.575, 460 * s));
-  const chip = c => lips
-    ? `<img class="lip" src="${lipDataURL(c.c)}" alt="" style="width:${lipW}px;height:${lipW * 0.575}px">`
-    : `<div class="dot" style="width:${dot}px;height:${dot}px;background:${c.c}"></div>`;
   /* 색 이름의 ' / '는 줄바꿈 */
-  grid.innerHTML = cols0.map(c => `<div class="cn-sw" style="width:${Math.floor(cellW) - 1}px">${chip(c)}<div class="nm">${escH((c.n || "").replace(/\s*\/\s*/g, "\n"))}</div>${d.hex ? `<div class="hx">${escH(c.c.toUpperCase())}</div>` : ""}</div>`).join("");
+  grid.innerHTML = cols0.map(c => `<div class="cn-sw" style="width:${Math.floor(cellW) - 1}px"><div class="dot" style="width:${dot}px;height:${dot}px;background:${c.c}"></div><div class="nm">${escH((c.n || "").replace(/\s*\/\s*/g, "\n"))}</div>${d.hex ? `<div class="hx">${escH(c.c.toUpperCase())}</div>` : ""}</div>`).join("");
 }
 /* 카드를 사진 칸 크기의 JPG 파일로 */
 async function cardToFile(d){
@@ -1760,10 +1896,15 @@ async function cardToFile(d){
   node.style.position = "fixed"; node.style.left = "-99999px"; node.style.top = "0";
   document.body.appendChild(node);
   try{
+    /* 글꼴·입술 틀을 먼저 준비해야 글자 높이와 입술 크기가 맞게 계산됨 */
+    const text = [d.label, d.title, d.sub, d.body, d.note, ...(d.colors || []).map(c => c.n + c.c)].join("");
+    if(document.fonts) await Promise.race([Promise.all([
+      ...[400, 600, 700, 900].map(w => document.fonts.load(`${w} 24px "Noto Sans KR"`, text || "가")),
+      document.fonts.load(`700 24px "Noto Serif KR"`, d.title || "가")
+    ]), new Promise(r => setTimeout(r, 3000))]).catch(() => {});
+    await lipTplReady;
     renderCardNode(node, d, W, H);
     node.style.position = "fixed"; node.style.left = "-99999px"; node.style.top = "0";
-    const text = [d.label, d.title, d.sub, d.body, ...(d.colors || []).map(c => c.n + c.c)].join("");
-    if(document.fonts) await Promise.race([Promise.all([400, 600, 700, 900].map(w => document.fonts.load(`${w} 24px "Noto Sans KR"`, text || "가"))), new Promise(r => setTimeout(r, 3000))]).catch(() => {});
     const canvas = await html2canvas(node, {width:W, height:H, scale:1, backgroundColor:null});
     const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.95));
     return new File([blob], "card.jpg", {type:"image/jpeg"});
@@ -1792,7 +1933,7 @@ $("f_preset").addEventListener("click", e => { if(e.target.closest("button")) re
 
 /* ---- 카드 편집 창 ---- */
 let cardEd = null; // {data, target(p 또는 null=새 카드)}
-const cardDefault = () => { const s = SEASONS.autumn; return {type:"palette", label:"", title:s.title, sub:s.sub, colors:s.colors.map(([c, n]) => ({c, n})), hex:true, body:"", bg:"auto", shape:"lip"}; };
+const cardDefault = () => { const s = SEASONS.autumn; return {type:"palette", label:"", title:s.title, sub:s.sub, colors:s.colors.map(([c, n]) => ({c, n})), hex:true, body:"", bg:"auto", shape:"photo", note:""}; };
 function renderColorRows(){
   const d = cardEd.data;
   $("colorRows").innerHTML = d.colors.map((c, i) => `<div class="color-row" data-ci="${i}"><input type="color" value="${c.c}" data-k="c" aria-label="색 고르기"><input type="text" value="${escH(c.n)}" data-k="n" placeholder="색 이름 (예: 코랄)"><input type="text" class="hexin" value="${c.c.toUpperCase()}" data-k="hex" maxlength="7" aria-label="색상 코드"><button type="button" data-k="del" aria-label="색 빼기">×</button></div>`).join("");
@@ -1802,7 +1943,8 @@ function syncCardForm(){
   const d = cardEd.data, pal = d.type === "palette";
   setSegUI("f_cardType", d.type); setSegUI("f_cardBg", d.bg); setSegUI("f_cardShape", d.shape || "circle");
   $("cardPaletteFields").hidden = $("cardColorsField").hidden = $("cardSubField").hidden = !pal;
-  $("cardLabelField").hidden = $("cardBodyField").hidden = pal;
+  $("cardBodyField").hidden = pal;
+  $("c_note").value = d.note || "";
   $("c_label").value = d.label; $("c_title").value = d.title; $("c_sub").value = d.sub; $("c_body").value = d.body; $("c_hex").checked = d.hex;
   $("c_title").placeholder = pal ? "예: 가을 웜톤" : "예: 봄 웜톤 메이크업 팁";
   renderColorRows();
@@ -1838,7 +1980,7 @@ $("seasonRow").addEventListener("click", e => {
   Object.assign(cardEd.data, {title:s.title, sub:s.sub, colors:s.colors.map(([c, n]) => ({c, n})), bg:"auto"});
   syncCardForm();
 });
-["c_label","c_title","c_sub","c_body"].forEach(id => $(id).addEventListener("input", e => { if(!cardEd) return; cardEd.data[id.slice(2)] = e.target.value; drawCardPreview(); }));
+["c_label","c_title","c_sub","c_body","c_note"].forEach(id => $(id).addEventListener("input", e => { if(!cardEd) return; cardEd.data[id.slice(2)] = e.target.value; drawCardPreview(); }));
 $("c_hex").addEventListener("change", e => { if(!cardEd) return; cardEd.data.hex = e.target.checked; drawCardPreview(); });
 $("colorRows").addEventListener("input", e => {
   const row = e.target.closest("[data-ci]"); if(!row || !cardEd) return;
