@@ -583,20 +583,28 @@ function applyRatio(){
 
 const TOP_BIAS = 0.6; // 위아래가 잘릴 때 0 = 가운데, 1 = 사진 맨 위에 맞춤
 /* 사진이 보이는 칸 = 전체에서 하단 흰 띠를 뺀 부분 */
-function photoBox(){
+function photoBox(p){
   const r = ratio();
-  if($("posterRoot").classList.contains("lay-mag")){ const m = magBox(); return {w:m.w, h:m.h}; }
+  if($("posterRoot").classList.contains("lay-mag")) return magBox(p ? photos.indexOf(p) : Math.max(cur, 0));
   return {w:r.w, h:r.h - $("o_foot").offsetHeight};
 }
-/* 매거진: 사진 틀 = 사방 56px 여백, 아래쪽 약 1/3은 글자 자리 */
-function magBox(){
+/* 매거진: 사진 틀 = 사방 56px 여백, 아래쪽 약 1/3은 글자 자리.
+   제목·작은 글씨가 둘 다 없는 장은 글자 자리 없이 사진이 아래까지 (베이지 액자처럼) */
+function magBox(i){
   const r = ratio(), k = parseFloat($("posterRoot").style.getPropertyValue("--k")) || 1, pad = 56 * k;
   const avail = r.h - $("o_foot").offsetHeight;
-  return {w:r.w - pad * 2, h:Math.round(avail * 0.67 - pad)};
+  const t = textOf(Math.max(i ?? 0, 0)), empty = !t.title.trim() && !t.sub.trim();
+  return {w:r.w - pad * 2, h:Math.round(empty ? avail - pad * 2 : avail * 0.67 - pad), empty};
 }
-function setMagSize(){ $("posterRoot").style.setProperty("--mag-ph", magBox().h + "px"); }
+function setMagSize(){ $("posterRoot").style.setProperty("--mag-ph", magBox(Math.max(cur, 0)).h + "px"); }
+/* 매거진에서 글자가 생기거나 없어지면 틀 크기가 바뀌니 손대지 않은 사진은 다시 맞춤 */
+function magRefit(){
+  if(!$("posterRoot").classList.contains("lay-mag")) return;
+  photos.forEach(p => { if(!p.manual) fitPhoto(p); });
+  if(P()) applyImgTransform();
+}
 function fitPhoto(p){
-  const box = photoBox();
+  const box = photoBox(p);
   /* 카드는 칸 크기에 딱 맞게 그려져 있으니 그대로 (더 키우거나 줄이지 않음) */
   /* 칸 크기에 딱 맞춰 만든 이미지(직접 디자인한 표지 등)도 마찬가지 */
   const exact = Math.abs(p.naturalW - Math.round(box.w)) <= 1 && Math.abs(p.naturalH - Math.round(box.h)) <= 1;
@@ -642,7 +650,7 @@ function autoRefit(){
   photos.forEach(p => { if(!p.manual) fitPhoto(p); });
   if(P()){ $("f_zoom").min = Math.floor(zoomFloor(P()) * 100); $("f_zoom").value = Math.round(P().zoom * 100); applyImgTransform(); }
 }
-function minZoom(p){ const box = photoBox(); return Math.min(1, box.w / p.baseW, box.h / p.baseH); }
+function minZoom(p){ const box = photoBox(p); return Math.min(1, box.w / p.baseW, box.h / p.baseH); }
 /* 그보다 더 줄여서 사방에 여백을 둘 수도 있음 (전체가 딱 들어가는 크기의 절반까지) */
 function zoomFloor(p){ return minZoom(p) * 0.5; }
 const CONTAIN_FIT = 0.92; // '전체 넣기'는 사방에 살짝 흰 여백이 남게
@@ -650,7 +658,7 @@ const CONTAIN_FIT = 0.92; // '전체 넣기'는 사방에 살짝 흰 여백이 �
 /* 사진 위치를 제한하고 img에 적용 — 미리보기와 저장용 복제본 모두 이걸로 그림.
    사진이 칸보다 크면 빈 곳이 안 생기게, 작으면 칸 안에서 자유롭게 */
 function clampPan(p){
-  const box = photoBox();
+  const box = photoBox(p);
   const effW = p.baseW * p.zoom, effH = p.baseH * p.zoom;
   const maxX = Math.abs(effW - box.w) / 2, maxY = Math.abs(effH - box.h) / 2;
   p.panX = Math.max(-maxX, Math.min(maxX, p.panX));
@@ -716,7 +724,11 @@ function fillText(root, i){
   q(".p-foot .r").textContent = foot;
   q(".p-foot .r").style.display = foot ? "" : "none";
   q(".p-foot").classList.toggle("solo", !foot);
-  /* 매거진 레이아웃 글자 (사진 아래) */
+  /* 매거진 레이아웃 글자 (사진 아래). 글자가 없는 장은 사진 틀을 아래까지 늘리고 라벨도 숨김 */
+  const mb = magBox(i);
+  if(root.classList.contains("lay-mag")) q(".p-photo").style.height = mb.h + "px";
+  else q(".p-photo").style.height = "";
+  q(".p-mag").style.display = mb.empty ? "none" : "";
   const label = $("f_magLabel").value.trim();
   q(".p-mag .m-label").textContent = label;
   q(".p-mag .m-label").style.display = label ? "" : "none";
@@ -747,6 +759,7 @@ function onTextInput(e){
   }
   syncText();
   autoRefit();
+  magRefit();
 }
 /* 장마다 다르게에서 지금 칸의 글자를 모든 사진에 똑같이 (제목·작은 글씨 따로) */
 function copyTextToAll(field){
@@ -1062,6 +1075,7 @@ wireSeg("f_textOn", v => {
   loadTextInputs();
   syncText();
   autoRefit();
+  magRefit();
 });
 /* 포스터에 클래스로 적용 — 저장용 복제본도 그대로 따라감 */
 const root = $("posterRoot");
