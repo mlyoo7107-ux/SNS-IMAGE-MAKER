@@ -187,6 +187,11 @@ html,button,select,label{touch-action:manipulation}
 .p-mag .m-title{font-family:"Noto Serif KR","Noto Sans KR",serif;font-size:76px;font-weight:700;line-height:1.2;letter-spacing:-.02em;white-space:pre-wrap}
 .p-mag .m-sub{font-size:30px;opacity:.62;margin-top:.6em;line-height:1.45;white-space:pre-wrap;letter-spacing:.01em}
 .lay-mag.reels-safe .p-foot{padding-bottom:252px}
+/* 매거진 모양: 글자 위치 '위' = 글자가 위·사진이 아래, '가운데' = 사진 아래 글자 칸의 가운데, 정렬 '가운데' = 글자 가운데 정렬 */
+.lay-mag.pos-top .p-mag{order:-1;padding-top:calc(64px*var(--k,1))}
+.lay-mag.pos-top .p-photo{margin:0 calc(56px*var(--k,1)) calc(56px*var(--k,1))}
+.lay-mag.pos-mid .p-mag{display:flex;flex-direction:column;justify-content:center;padding-top:0}
+.lay-mag.align-center .p-mag{text-align:center}
 
 /* 피드 미리보기 */
 .feed-ov{position:fixed;inset:0;z-index:150;background:rgba(20,20,24,.92);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -743,8 +748,11 @@ function fillText(root, i){
   q(".p-foot").classList.toggle("solo", !foot);
   /* 매거진 레이아웃 글자 (사진 아래). 글자가 없는 장은 사진 틀을 아래까지 늘리고 라벨도 숨김 */
   const mb = magBox(i);
-  if(root.classList.contains("lay-mag")) q(".p-photo").style.height = mb.h + "px";
-  else q(".p-photo").style.height = "";
+  const k = parseFloat(root.style.getPropertyValue("--k")) || 1;
+  if(root.classList.contains("lay-mag")){
+    q(".p-photo").style.height = mb.h + "px";
+    q(".p-photo").style.marginTop = mb.empty ? 56 * k + "px" : ""; // 글자를 위에 두는 모양이어도 글자가 없으면 위 여백 유지
+  }else q(".p-photo").style.height = q(".p-photo").style.marginTop = "";
   q(".p-mag").style.display = mb.empty ? "none" : "";
   const label = $("f_magLabel").value.trim();
   q(".p-mag .m-label").textContent = label;
@@ -827,7 +835,12 @@ function renderStrip(){
   if(!n && blurMode) setBlurMode(false);
   if(!pendingFiles) $("downloadBtn").textContent = saveLabel();
   const on = $("strip").querySelector(".th.on");
-  if(on) on.scrollIntoView({block:"nearest", inline:"nearest"});
+  /* 고른 사진이 보이게 사진 줄만 옆으로 넘김 (scrollIntoView는 화면 전체를 사진 줄로 끌어올려서 안 씀) */
+  if(on){
+    const st = $("strip"), l = on.offsetLeft - st.offsetLeft, r = l + on.offsetWidth;
+    if(l < st.scrollLeft) st.scrollLeft = l;
+    else if(r > st.scrollLeft + st.clientWidth) st.scrollLeft = r - st.clientWidth;
+  }
 }
 function show(i){
   if(i !== cur) selBox = -1;
@@ -2284,6 +2297,7 @@ function applyLayout(){
   root.classList.toggle("lay-gallery", gallery);
   root.classList.toggle("lay-mag", mag);
   $("magOpts").hidden = !mag;
+  $("f_textColor").closest(".field").hidden = mag; // 매거진은 글자 색·그늘이 정해져 있음
   setMagSize();
   $("galleryOpts").hidden = !gallery;
   $("footField").hidden = gallery; // 갤러리 하단은 정해진 문구라 '하단 오른쪽 문구'는 안 씀
