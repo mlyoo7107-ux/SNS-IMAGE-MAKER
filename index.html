@@ -1933,7 +1933,8 @@ function renderCardNode(node, d, W, H){
   const kk = () => node.getBoundingClientRect().height / H || 1; // 미리보기 축소 배율 보정
   if(d.shape === "lip" || d.shape === "photo"){
     /* 목록형: 왼쪽 입술(실사 사진 또는 그림) · 오른쪽 브랜드(작게)/제품·호수(굵게) */
-    const photo = d.shape === "photo" && lipTpl;
+    /* 색마다 자기 이미지(발색 칩 등)가 있으면 입술 틀이 없어도 사진 칸으로 */
+    const photo = d.shape === "photo" && (lipTpl || (d.colors || []).every(c => c.img));
     node.innerHTML = head + `<div class="cn-rows${wide && n > 2 ? " two" : ""}"></div>` + note;
     const box = node.querySelector(".cn-rows");
     if(!n) return;
