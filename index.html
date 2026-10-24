@@ -1781,7 +1781,20 @@ const lipTplReady = new Promise(res => {
       }
       const under = new Float32Array(N * 3);
       for(let i = 0; i < N; i++) for(let k = 0; k < 3; k++) under[i * 3 + k] = W[i] ? C[k][i] : [222, 170, 150][k];
-      lipTpl = {w, h, data, raw, mask, edge, alpha, wide, under, meanL: sumL / (cnt || 1)};
+      /* 입술 안쪽의 큰 밝기 흐름(부드럽게 흐린 것)을 테두리 밖까지 이어 둠
+         → 테두리를 '기본색'으로 칠하면 안쪽보다 진해져 선처럼 보여서, 테두리엔 이 흐름을 씀 */
+      const meanL = sumL / (cnt || 1), iw = new Float32Array(N), ir = new Float32Array(N);
+      for(let i = 0; i < N; i++){ const m = raw[i] > 0.9 ? 1 : 0; iw[i] = m; ir[i] = m * (0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2]) / meanL; }
+      const bw0 = box(iw, 5), br0 = box(ir, 5);
+      let SW = new Float32Array(N), SR = new Float32Array(N);
+      for(let i = 0; i < N; i++) if(bw0[i] > 0.5){ SW[i] = 1; SR[i] = br0[i] / bw0[i]; }
+      for(const rad of [3, 6, 12, 24]){
+        const bw = box(SW, rad), br = box(SR, rad);
+        for(let i = 0; i < N; i++) if(!SW[i] && bw[i] > 0){ SW[i] = -1; SR[i] = br[i] / bw[i]; }
+        for(let i = 0; i < N; i++) if(SW[i] === -1){ SW[i] = 1; } // 이번에 채운 곳은 다음 단계 재료로
+      }
+      const smooth = SR;
+      lipTpl = {w, h, data, raw, mask, edge, alpha, wide, under, smooth, meanL};
     }catch(e){ lipTpl = null; }
     res();
   };
@@ -1809,7 +1822,7 @@ function lipPhotoURL(hex, asIs){
   if(!lipTpl) return lipDataURL(hex);
   const key = hex + (asIs ? "|p" : "");
   if(lipPhotoCache.has(key)) return lipPhotoCache.get(key);
-  const {w, h, data, raw, mask, edge, alpha, wide, under, meanL} = lipTpl;
+  const {w, h, data, raw, mask, edge, alpha, wide, under, smooth, meanL} = lipTpl;
   /* 실제로 바른 것처럼: 틴트·글로스는 원래 입술 혈색이 비쳐 보임 → 밝은(누드·피치) 색일수록 혈색을 더 섞고
      채도를 살짝 올림. 안 그러면 피부색과 비슷해져 컨실러를 바른 것처럼 보임 */
   const t0 = hexRGB(hex), L0 = (0.299 * t0[0] + 0.587 * t0[1] + 0.114 * t0[2]) / 255;
@@ -1829,9 +1842,8 @@ function lipPhotoURL(hex, asIs){
     if(mask[i] <= 0){ o[i * 4] = r; o[i * 4 + 1] = g; o[i * 4 + 2] = b; o[i * 4 + 3] = 255; continue; }
     /* 원래 입술의 밝기 무늬를 새 색에 입힘 (입술 바깥으로 넓힌 부분은 무늬 없이 → 하얀 테두리 방지) */
     let rr = (0.299 * r + 0.587 * g + 0.114 * b) / meanL;
-    rr = 1 + (rr - 1) * raw[i];
-    /* 테두리 쪽 그늘은 약하게 → 외곽선이 그려진 것처럼 보이지 않음 */
-    rr = 1 + (rr - 1) * (0.15 + 0.85 * edge[i]); // 테두리의 밝은 광택 줄도 같이 약하게
+    /* 테두리 쪽은 틀 사진의 테두리 그늘·광택 줄 대신 안쪽의 부드러운 밝기 흐름을 씀 → 외곽선처럼 안 보임 */
+    rr = smooth[i] + (rr - smooth[i]) * edge[i];
     /* 테두리는 피부 위로 자연스럽게 번지듯 섞음 (밑에 비치는 빨간 틀 대신 피부색을 깔고) */
     const a = alpha[i], wr = Math.max(wide[i], mask[i]);
     r = r * (1 - wr) + under[i * 3] * wr; g = g * (1 - wr) + under[i * 3 + 1] * wr; b = b * (1 - wr) + under[i * 3 + 2] * wr;
