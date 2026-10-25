@@ -192,8 +192,12 @@ html,button,select,label{touch-action:manipulation}
 .p-mag .m-label{font-size:24px;font-weight:700;letter-spacing:.25em;color:#d6246f;margin-bottom:.9em}
 .p-mag .m-title{font-family:"Noto Serif KR","Noto Sans KR",serif;font-size:76px;font-weight:700;line-height:1.2;letter-spacing:-.02em;white-space:pre-wrap}
 .p-mag .m-sub{font-size:30px;opacity:.62;margin-top:.6em;line-height:1.45;white-space:pre-wrap;letter-spacing:.01em}
-.lay-mag.reels-safe .p-foot{padding-bottom:252px}
 .lay-mag .p-foot{margin-top:auto} /* 글자가 없어 남는 자리가 생겨도 로고 띠는 항상 맨 아래 */
+/* 매거진 + 릴스 표지(피드 격자 맞춤): 피드에 보이는 가운데 3:4 안에 매거진 표지가 통째로 들어가고,
+   위아래 240px(피드에선 잘리는 곳)은 베이지 여백. --rs = 240px(릴스 맞춤일 때) / 0 */
+.lay-mag .p-photo{margin-top:calc(56px*var(--k,1) + var(--rs,0px))}
+.lay-mag.pos-top .p-mag{padding-top:calc(64px*var(--k,1) + var(--rs,0px))}
+.lay-mag.reels-safe .p-foot{padding-bottom:calc(12px*var(--k,1));margin-bottom:var(--rs,0px)}
 /* 매거진 모양: 글자 위치 '위' = 글자가 위·사진이 아래, '가운데' = 사진 아래 글자 칸의 가운데, 정렬 '가운데' = 글자 가운데 정렬 */
 .lay-mag.pos-top .p-mag{order:-1;padding-top:calc(64px*var(--k,1))}
 .lay-mag.pos-top .p-photo{margin:0 calc(56px*var(--k,1)) calc(56px*var(--k,1))}
@@ -591,6 +595,7 @@ function applyRatio(){
   const tall = $("f_ratio").value === "9:16";
   $("reelsSafeRow").hidden = !tall;
   root.classList.toggle("reels-safe", tall && $("f_reelsSafe").checked);
+  root.style.setProperty("--rs", tall && $("f_reelsSafe").checked ? (r.h - r.w * 4 / 3) / 2 + "px" : "0px");
   const guide = $("feedGuide");
   guide.hidden = !tall;
   if(tall){
@@ -641,7 +646,8 @@ function photoBox(p){
    제목·작은 글씨가 둘 다 없는 장은 글자 자리 없이 사진이 아래까지 (베이지 액자처럼) */
 function magBox(i){
   const r = ratio(), k = parseFloat($("posterRoot").style.getPropertyValue("--k")) || 1, pad = 56 * k;
-  const avail = r.h - footH("magazine");
+  const rs = parseFloat($("posterRoot").style.getPropertyValue("--rs")) || 0; // 릴스 맞춤이면 위아래 잘리는 곳은 빼고
+  const avail = r.h - footH("magazine") - rs * 2;
   const t = textOf(Math.max(i ?? 0, 0)), empty = !t.title.trim() && !t.sub.trim();
   /* 사진 틀 아래 끝 = 칸의 60% 지점 — 웜톤·쿨톤 표지 콜라주와 같은 높이라 피드에서 나란히 맞음 */
   return {w:r.w - pad * 2, h:Math.round(empty ? avail - pad * 2 : avail * 0.6 - pad), empty};
@@ -778,7 +784,8 @@ function fillText(root, i){
   const k = parseFloat(root.style.getPropertyValue("--k")) || 1;
   if(root.classList.contains("lay-mag")){
     q(".p-photo").style.height = mb.h + "px";
-    q(".p-photo").style.marginTop = mb.empty ? 56 * k + "px" : ""; // 글자를 위에 두는 모양이어도 글자가 없으면 위 여백 유지
+    const rs = parseFloat(root.style.getPropertyValue("--rs")) || 0;
+    q(".p-photo").style.marginTop = mb.empty ? 56 * k + rs + "px" : ""; // 글자를 위에 두는 모양이어도 글자가 없으면 위 여백 유지
   }else q(".p-photo").style.height = q(".p-photo").style.marginTop = "";
   q(".p-mag").style.display = mb.empty ? "none" : "";
   const label = $("f_magLabel").value.trim();
