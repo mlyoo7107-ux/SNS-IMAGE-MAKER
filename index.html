@@ -144,6 +144,9 @@ html,button,select,label{touch-action:manipulation}
 .pos-mid .p-text{top:0;bottom:0;display:flex;flex-direction:column;justify-content:center}
 /* 제목·작은 글씨는 미리보기에서 끌어서 옮길 수 있음 */
 .p-title,.p-sub{cursor:move}
+/* 글자 둘레 점선과 오른쪽 아래 크기 조절 점 (미리보기에만) */
+.text-frame{position:absolute;z-index:6;border:1.5px dashed rgba(255,45,134,.75);border-radius:6px;pointer-events:none}
+.text-frame .th-size{position:absolute;right:-9px;bottom:-9px;width:18px;height:18px;border-radius:50%;background:#ff2d86;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:nwse-resize;pointer-events:auto;touch-action:none}
 .pos-mid .p-scrim{top:0;height:100%;background:rgba(0,0,0,.38)}
 .align-center .p-text{text-align:center}
 .p-sub{margin-top:calc(16px*var(--k,1));font-size:26px;font-weight:600;color:#fff;opacity:.92;line-height:1.4;white-space:pre-wrap;text-shadow:0 2px 8px rgba(0,0,0,.35)}
@@ -434,7 +437,7 @@ html,button,select,label{touch-action:manipulation}
     </div>
     <div class="field" id="footField"><label>하단 오른쪽 문구 <span>(선택)</span></label><input id="f_foot" placeholder="예: 홈페이지 주소나 SNS 계정"><p class="hint">비워두면 COLOR.M 로고만 가운데에 들어가요</p></div>
     </div>
-    <div class="field"><label>글자 위치</label><div class="seg" id="f_pos"><button type="button" data-v="top">위</button><button type="button" data-v="mid">가운데</button><button type="button" data-v="bottom" class="on">아래</button></div><p class="hint">미리보기에서 제목을 끌어서 원하는 곳에 옮길 수도 있어요 (위·가운데·아래를 다시 누르면 처음 자리로)</p></div>
+    <div class="field"><label>글자 위치</label><div class="seg" id="f_pos"><button type="button" data-v="top">위</button><button type="button" data-v="mid">가운데</button><button type="button" data-v="bottom" class="on">아래</button></div><p class="hint">미리보기에서 제목을 끌면 옮겨지고, 점선 오른쪽 아래 분홍 점을 끌면 크기가 바뀌어요 (위·가운데·아래를 누르면 처음 자리로, 작게·보통·크게를 누르면 처음 크기로)</p></div>
     <div class="field"><label>정렬</label><div class="seg" id="f_align"><button type="button" data-v="left" class="on">왼쪽</button><button type="button" data-v="center">가운데</button></div></div>
     <div class="field">
       <label>글자 색</label>
@@ -453,7 +456,7 @@ html,button,select,label{touch-action:manipulation}
     <p class="hint" style="text-align:center;margin:0" id="dimHint"></p>
   </div>
   <div class="preview-outer">
-    <div class="preview-wrap empty" id="previewWrap"><div class="drag-hint" id="dragHint">🖐️ 드래그해서 사진 · 제목 위치 조정</div><div class="blur-layer" id="blurLayer" hidden></div><div class="feed-guide" id="feedGuide" hidden><span>피드에 보이는 영역</span></div>
+    <div class="preview-wrap empty" id="previewWrap"><div class="drag-hint" id="dragHint">🖐️ 드래그해서 사진 · 제목 위치 조정</div><div class="blur-layer" id="blurLayer" hidden></div><div class="text-frame" id="textFrame" hidden><span class="th-size" id="textSizer" title="끌어서 글자 크기 조절"></span></div><div class="feed-guide" id="feedGuide" hidden><span>피드에 보이는 영역</span></div>
       <div id="posterRoot">
         <div class="p-photo">
           <img class="p-bg" alt="" hidden>
@@ -614,8 +617,9 @@ function applyRatio(){
   const wide = r.w > r.h;
   root.style.setProperty("--k", wide ? 1.4 : 1);
   const s = (wide ? 1.05 : Math.min(r.h / REF_H, 1.15)) * textScale;
-  $("o_title").style.fontSize = (BASE_TITLE_SIZE * s) + "px";
-  $("o_sub").style.fontSize = (BASE_SUB_SIZE * s) + "px";
+  $("o_title").dataset.base = BASE_TITLE_SIZE * s;
+  $("o_sub").dataset.base = BASE_SUB_SIZE * s;
+  applyTextScale(root, layOf(Math.max(cur, 0)));
   const mq = c => root.querySelector(".p-mag " + c);
   mq(".m-title").dataset.base = 76 * s;
   mq(".m-sub").dataset.base = 30 * s;
@@ -796,7 +800,8 @@ function fillText(root, i){
   q(".p-title").textContent = title;
   q(".p-sub").textContent = sub;
   q(".p-sub").style.display = sub ? "" : "none";
-  const L = layOf(i); // 미리보기에서 끌어 옮긴 만큼 (포스터 px)
+  const L = layOf(i); // 미리보기에서 끌어 옮긴 만큼 (포스터 px) · 끌어 키운 배율
+  applyTextScale(root, L);
   q(".p-text").style.transform = L.tx || L.ty ? `translate(${L.tx || 0}px,${L.ty || 0}px)` : "";
   /* 글자가 없으면 사진을 어둡게 덮지 않음 */
   q(".p-scrim").style.display = title.trim() || sub ? "" : "none";
@@ -820,7 +825,25 @@ function fillText(root, i){
   q(".p-mag .m-sub").style.display = sub ? "" : "none";
   fitMag(root);
 }
-function syncText(){ fillText($("posterRoot"), Math.max(cur, 0)); }
+function syncText(){ fillText($("posterRoot"), Math.max(cur, 0)); placeTextHandle(); }
+/* 제목·작은 글씨 크기 = 기본 크기 × 미리보기에서 끌어 키운 배율(L.ts) */
+function applyTextScale(root, L){
+  [".p-title", ".p-sub"].forEach(c => {
+    const el = root.querySelector(c);
+    if(el.dataset.base) el.style.fontSize = el.dataset.base * (L.ts || 1) + "px";
+  });
+}
+/* 미리보기의 글자 둘레 점선 + 오른쪽 아래 크기 조절 점 (저장 이미지엔 안 들어감) */
+function placeTextHandle(){
+  const fr = $("textFrame"), root = $("posterRoot");
+  const els = [...root.querySelectorAll(".p-title, .p-sub")].filter(el => el.textContent.trim() && el.style.display !== "none");
+  if(!P() || blurMode || root.classList.contains("lay-mag") || !els.length){ fr.hidden = true; return; }
+  const wr = $("previewWrap").getBoundingClientRect(), rg = document.createRange();
+  let l = Infinity, t = Infinity, rt = -Infinity, b = -Infinity;
+  els.forEach(el => { rg.selectNodeContents(el); const r = rg.getBoundingClientRect(); l = Math.min(l, r.left); t = Math.min(t, r.top); rt = Math.max(rt, r.right); b = Math.max(b, r.bottom); });
+  Object.assign(fr.style, {left:l - wr.left - 6 + "px", top:t - wr.top - 6 + "px", width:rt - l + 12 + "px", height:b - t + 12 + "px"});
+  fr.hidden = false;
+}
 /* 입력칸에 지금 편집 중인 글자를 보여줌 (장마다 다르게면 현재 사진의 글자) */
 function loadTextInputs(){
   const t = textOn === "each" ? textOf(Math.max(cur, 0)) : shared;
@@ -1150,6 +1173,27 @@ document.addEventListener("paste", e => {
   wrap.addEventListener("click", () => { if(!P()) $("fileInput").click(); });
 })();
 
+/* 글자 크기 조절 점: 글자 왼쪽 위를 기준으로 멀리 끌면 커지고 가까이 끌면 작아짐 */
+(() => {
+  const h = $("textSizer");
+  let st = null; // {ax, ay, d, ts}
+  h.addEventListener("pointerdown", e => {
+    e.stopPropagation(); e.preventDefault(); // 사진 끌기로 넘어가지 않게
+    const L = layEach && P() ? P().lay : G, r = $("textFrame").getBoundingClientRect();
+    st = {ax:r.left, ay:r.top, d:Math.max(20, Math.hypot(e.clientX - r.left, e.clientY - r.top)), ts:L.ts || 1};
+    h.setPointerCapture(e.pointerId);
+  });
+  h.addEventListener("pointermove", e => {
+    if(!st) return;
+    const L = layEach && P() ? P().lay : G;
+    L.ts = Math.max(0.4, Math.min(3, st.ts * Math.hypot(e.clientX - st.ax, e.clientY - st.ay) / st.d));
+    syncText();
+  });
+  const end = () => { st = null; };
+  h.addEventListener("pointerup", end);
+  h.addEventListener("pointercancel", end);
+})();
+
 /* ---------- 입력칸 ---------- */
 ["f_title","f_sub"].forEach(id => $(id).addEventListener("input", onTextInput));
 $("titleAll").onclick = () => copyTextToAll("title");
@@ -1179,7 +1223,11 @@ function wireSeg(id, onPick){
     clearPending();
   });
 }
-wireSeg("f_size", v => { textScale = Number(v); applyRatio(); autoRefit(); });
+wireSeg("f_size", v => {
+  textScale = Number(v);
+  const L = layEach && P() ? P().lay : G; L.ts = 1; // 작게·보통·크게를 고르면 끌어 바꾼 크기는 처음으로
+  applyRatio(); syncText(); autoRefit();
+});
 wireSeg("f_textOn", v => {
   /* 장마다 다르게로 바꾸면 각 사진이 지금 글자로 시작 — 바꿀 사진만 고치면 됨 */
   /* 장마다 다르게로 바꾸면 공통 문구로 채운 채 시작 — 이 사진만 따로 고쳤던 칸은 그대로 둠 */
@@ -1278,6 +1326,7 @@ function setBlurMode(on){
 
 /* 가리개 네모를 미리보기 위에 그림 (저장 이미지에는 안 들어감) */
 function renderBoxes(){
+  placeTextHandle();
   const layer = $("blurLayer");
   if(!blurMode || !P()){ layer.innerHTML = ""; return; }
   layer.classList.toggle("round", blurShape === "ellipse");
@@ -1785,7 +1834,7 @@ async function collectWork(){
     settings:{
       preset:segVal("f_preset"), ratio:$("f_ratio").value, ratioManuallySet, reelsSafe:$("f_reelsSafe").checked,
       fit:segVal("f_fit"), bg:segVal("f_bgMode"), textColor:segVal("f_textColor"), shade:segVal("f_shade"),
-      pos:G.pos, align:G.align, tx:G.tx || 0, ty:G.ty || 0, size:segVal("f_size"), textOn:segVal("f_textOn"), layEach,
+      pos:G.pos, align:G.align, tx:G.tx || 0, ty:G.ty || 0, ts:G.ts || 1, size:segVal("f_size"), textOn:segVal("f_textOn"), layEach,
       shared:{...shared}, foot:$("f_foot").value,
       blurType:segVal("f_blurType"), blurShape:segVal("f_blurShape"), blurLevel,
       layout:G.layout, maker:$("f_maker").value, makerCustom:$("f_makerCustom").value, magLabel:$("f_magLabel").value,
@@ -1822,7 +1871,7 @@ async function restoreWork(w){
     shared.title = s.shared.title || ""; shared.sub = s.shared.sub || "";
     $("f_foot").value = s.foot || "";
     setSegUI("f_layout", s.layout || "basic");
-    Object.assign(G, {layout:s.layout || "basic", pos:s.pos || "bottom", align:s.align || "left", tx:s.tx || 0, ty:s.ty || 0});
+    Object.assign(G, {layout:s.layout || "basic", pos:s.pos || "bottom", align:s.align || "left", tx:s.tx || 0, ty:s.ty || 0, ts:s.ts || 1});
     layEach = !!s.layEach; $("f_layEach").checked = layEach;
     $("f_magLabel").value = s.magLabel ?? "COLOR.M";
     $("f_maker").value = s.maker || "Character Maker"; $("f_makerCustom").value = s.makerCustom || "";
