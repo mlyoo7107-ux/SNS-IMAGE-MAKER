@@ -177,6 +177,8 @@ html,button,select,label{touch-action:manipulation}
 .lay-gallery .p-foot .g-r b{font-size:calc(17px*var(--k,1));color:#ff2d86}
 .lay-gallery .p-foot .circle{width:calc(34px*var(--k,1));height:calc(34px*var(--k,1));border-radius:50%;background:#ff2d86;color:#fff;display:flex;align-items:center;justify-content:center;font-size:calc(16px*var(--k,1));font-weight:900}
 .lay-gallery.reels-safe .p-foot{padding-bottom:270px}
+/* 없음 레이아웃: 하단 로고 띠 없이 사진만 꽉 차게 */
+.lay-none .p-foot{display:none!important}
 /* 매거진 레이아웃: 베이지 바탕에 사진을 둥근 틀로 넣고, 아래에 라벨 · 명조 제목 · 작은 글씨 (카드 만들기와 같은 톤) */
 .adj-grid{display:grid;grid-template-columns:44px 1fr 30px;align-items:center;gap:4px 8px;font-size:12.5px;margin-bottom:6px}
 .adj-grid input{width:100%;padding:0;border:0;position:relative;z-index:1;background:transparent;accent-color:var(--a);display:block}
@@ -421,8 +423,8 @@ html,button,select,label{touch-action:manipulation}
     <div class="field"><label>글자 크기</label><div class="seg" id="f_size"><button type="button" data-v="0.8">작게</button><button type="button" data-v="1" class="on">보통</button><button type="button" data-v="1.25">크게</button></div></div>
     <div class="field">
       <label>레이아웃</label>
-      <div class="seg" id="f_layout"><button type="button" data-v="basic" class="on">COLOR.M 로고</button><button type="button" data-v="magazine">매거진</button><button type="button" data-v="gallery">메이커 갤러리</button></div>
-      <p class="hint">'매거진'은 베이지 바탕에 사진을 틀로 넣고 아래에 제목을 써요. 피드 색감을 하나로 맞출 때 좋아요 (카드 만들기와 같은 톤)<br>'메이커 갤러리'는 갤러리 SNS 이미지와 같은 모양이에요 (하단에 메이커 이름 · COLOR.M MAKER GALLERY)</p>
+      <div class="seg" id="f_layout"><button type="button" data-v="basic" class="on">COLOR.M 로고</button><button type="button" data-v="magazine">매거진</button><button type="button" data-v="gallery">메이커 갤러리</button><button type="button" data-v="none">없음</button></div>
+      <p class="hint">'매거진'은 베이지 바탕에 사진을 틀로 넣고 아래에 제목을 써요. 피드 색감을 하나로 맞출 때 좋아요 (카드 만들기와 같은 톤)<br>'메이커 갤러리'는 갤러리 SNS 이미지와 같은 모양이에요 (하단에 메이커 이름 · COLOR.M MAKER GALLERY)<br>'없음'은 하단 로고 띠 없이 사진만 꽉 채워요</p>
       <label class="chk" id="layEachRow" hidden><input type="checkbox" id="f_layEach"> 사진마다 레이아웃 따로 <span>켜면 레이아웃 · 글자 위치 · 정렬이 지금 고른 사진에만 적용돼요 (위 사진 줄에서 사진을 골라 하나씩 바꿔요)</span></label>
       <div id="magOpts" hidden>
         <label style="margin-top:10px">위쪽 작은 영문 라벨</label>
@@ -626,11 +628,13 @@ function layOf(i){ const p = photos[i]; return layEach && p && p.lay ? p.lay : G
 function applyLayClasses(el, L){
   el.classList.toggle("lay-gallery", L.layout === "gallery");
   el.classList.toggle("lay-mag", L.layout === "magazine");
+  el.classList.toggle("lay-none", L.layout === "none");
   el.classList.remove("pos-top", "pos-mid", "pos-bottom"); el.classList.add("pos-" + L.pos);
   el.classList.remove("align-left", "align-center"); el.classList.add("align-" + L.align);
 }
 /* 하단 로고 띠 높이 — 갤러리 레이아웃은 띠가 더 두꺼워서 레이아웃마다 잼 */
 function footH(layout){
+  if(layout === "none") return 0;
   const r = $("posterRoot"), had = r.classList.contains("lay-gallery");
   r.classList.toggle("lay-gallery", layout === "gallery");
   const h = $("o_foot").offsetHeight;
@@ -2343,7 +2347,7 @@ function applyLayout(){
   $("f_textColor").closest(".field").hidden = mag; // 매거진은 글자 색·그늘이 정해져 있음
   setMagSize();
   $("galleryOpts").hidden = !gallery;
-  $("footField").hidden = gallery; // 갤러리 하단은 정해진 문구라 '하단 오른쪽 문구'는 안 씀
+  $("footField").hidden = gallery || L.layout === "none"; // 갤러리 하단은 정해진 문구라 '하단 오른쪽 문구'는 안 씀
   const custom = $("f_maker").value === "custom";
   $("f_makerCustom").hidden = !custom;
   $("o_maker").textContent = custom ? ($("f_makerCustom").value.trim() || "Maker") : $("f_maker").value;
@@ -2361,7 +2365,7 @@ function setLay(key, v){
 }
 wireSeg("f_layout", v => {
   if(v === "gallery"){ $("f_brand").checked = true; $("f_aiMark").checked = true; }
-  if(v === "magazine"){ $("f_brand").checked = false; $("f_aiMark").checked = false; }
+  if(v === "magazine" || v === "none"){ $("f_brand").checked = false; $("f_aiMark").checked = false; }
   setLay("layout", v);
   if(layEach && P()) fitPhoto(P()); else photos.forEach(fitPhoto); // 사진 칸 크기가 바뀌니 다시 맞춤
   show(cur);
