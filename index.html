@@ -33,6 +33,8 @@ html,button,select,label{touch-action:manipulation}
 /* PC: 미리보기 왼쪽, 입력칸 오른쪽 */
 .layout{max-width:1200px;margin:auto;padding:24px 20px 80px;display:grid;grid-template-columns:1fr 360px;gap:28px;align-items:start}
 .panel{background:white;border:1px solid var(--l);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.text-box{display:flex;flex-direction:column;gap:14px;padding:14px;border:1px solid #f6c4da;border-radius:12px;background:#fff8fb}
+.text-box .tb-head{font-size:13px;font-weight:bold;color:var(--a)}
 .field label{display:block;font-size:12.5px;font-weight:bold;margin-bottom:6px;color:var(--t)}
 .field label span{font-weight:normal;color:var(--m)}
 .field input,.field select,.field textarea{width:100%;padding:9px 10px;border:1px solid var(--l);border-radius:8px;font-size:13px;font-family:inherit;background:white}
@@ -140,6 +142,8 @@ html,button,select,label{touch-action:manipulation}
 /* 저장 이미지(html2canvas)에서 덮개 아래 끝에 검은 줄이 생김 → 덮개를 사진 밖까지 늘려 그 줄이 잘려 나가게 하고, 아래 38%는 투명 */
 .pos-top .p-scrim{top:0;bottom:auto;height:calc(100% + 6px);background:linear-gradient(to top,rgba(0,0,0,0) 0%,rgba(0,0,0,0) 38%,rgba(0,0,0,.38) 72%,rgba(0,0,0,.72) 100%)}
 .pos-mid .p-text{top:0;bottom:0;display:flex;flex-direction:column;justify-content:center}
+/* 제목·작은 글씨는 미리보기에서 끌어서 옮길 수 있음 */
+.p-title,.p-sub{cursor:move}
 .pos-mid .p-scrim{top:0;height:100%;background:rgba(0,0,0,.38)}
 .align-center .p-text{text-align:center}
 .p-sub{margin-top:calc(16px*var(--k,1));font-size:26px;font-weight:600;color:#fff;opacity:.92;line-height:1.4;white-space:pre-wrap;text-shadow:0 2px 8px rgba(0,0,0,.35)}
@@ -408,10 +412,29 @@ html,button,select,label{touch-action:manipulation}
     <div class="field"><label>확대 <span id="zoomFor"></span> <b id="zoomPct" style="float:right;color:var(--a)"></b></label><input type="range" id="f_zoom" min="100" max="250" value="100" style="width:100%;padding:0;border:0"><p class="hint">미리보기를 드래그하면 위치를 옮길 수 있어요. 많이 옮기고 싶으면 확대를 키우고, 왼쪽으로 줄이면 사진 전체가 들어가고 사방에 여백도 생겨요</p>
       <button type="button" class="blur-btn" id="zoomAll" style="margin-top:8px" hidden>📐 이 확대·위치를 모든 사진에 적용</button>
     </div>
+    <div class="field">
+      <label>레이아웃</label>
+      <div class="seg" id="f_layout"><button type="button" data-v="basic" class="on">COLOR.M 로고</button><button type="button" data-v="magazine">매거진</button><button type="button" data-v="gallery">메이커 갤러리</button><button type="button" data-v="none">없음</button></div>
+      <p class="hint">'매거진'은 베이지 바탕에 사진을 틀로 넣고 아래에 제목을 써요. 피드 색감을 하나로 맞출 때 좋아요 (카드 만들기와 같은 톤)<br>'메이커 갤러리'는 갤러리 SNS 이미지와 같은 모양이에요 (하단에 메이커 이름 · COLOR.M MAKER GALLERY)<br>'없음'은 하단 로고 띠 없이 사진만 꽉 채워요</p>
+      <label class="chk" id="layEachRow" hidden><input type="checkbox" id="f_layEach"> 사진마다 레이아웃 따로 <span>켜면 레이아웃 · 글자 위치 · 정렬이 지금 고른 사진에만 적용돼요 (위 사진 줄에서 사진을 골라 하나씩 바꿔요)</span></label>
+      <label class="chk"><input type="checkbox" id="f_brand"> 왼쪽 위 COLOR.M 표시</label>
+      <label class="chk"><input type="checkbox" id="f_aiMark"> 'AI-GENERATED IMAGE' 표시 <span>AI로 만든 이미지라면 켜 두는 걸 권해요 (왼쪽 위 표시 아래에 들어가요)</span></label>
+    </div>
+    <!-- 이미지에 들어가는 글자 입력칸은 모두 여기 한곳에 (레이아웃에 따라 라벨·메이커·하단 문구 칸이 보였다 숨었다 함) -->
+    <div class="text-box">
+    <div class="tb-head">✏️ 이미지에 들어갈 문구</div>
     <div class="field" id="textOnField" hidden><label>사진별 글자</label><div class="seg" id="f_textOn"><button type="button" data-v="all" class="on">모두 같게</button><button type="button" data-v="first">첫 장만</button><button type="button" data-v="each">장마다 다르게</button></div><p class="hint">'장마다 다르게'는 위에서 사진을 고른 뒤 그 사진의 제목을 고쳐요. 제목을 비우면 그 사진엔 로고만 들어가요</p></div>
+    <div class="field" id="magOpts" hidden><label>상단 작은 글씨 <span>(매거진 · 선택)</span></label><input id="f_magLabel" value="COLOR.M" placeholder="예: COLOR.M CLASS · PERSONAL COLOR"></div>
     <div class="field"><label>제목 <span id="titleFor"></span></label><textarea id="f_title" rows="2" placeholder="이미지에 넣을 제목을 입력하세요"></textarea><p class="hint">줄을 바꾸면 이미지에서도 줄이 바뀌어요</p><button type="button" class="copy-all" id="titleAll" hidden>↳ 이 제목을 모든 사진에 똑같이</button></div>
-    <div class="field"><label>작은 글씨 <span id="subFor">(선택)</span></label><input id="f_sub" placeholder="예: 2026 가을 컬러 수업 · 3학년 2반"><button type="button" class="copy-all" id="subAll" hidden>↳ 이 작은 글씨를 모든 사진에 똑같이</button></div>
-    <div class="field"><label>글자 위치</label><div class="seg" id="f_pos"><button type="button" data-v="top">위</button><button type="button" data-v="mid">가운데</button><button type="button" data-v="bottom" class="on">아래</button></div></div>
+    <div class="field"><label>하단 작은 글씨 <span id="subFor">(선택)</span></label><input id="f_sub" placeholder="예: 2026 가을 컬러 수업 · 3학년 2반"><button type="button" class="copy-all" id="subAll" hidden>↳ 이 작은 글씨를 모든 사진에 똑같이</button></div>
+    <div class="field" id="galleryOpts" hidden>
+      <label>메이커 이름 <span>(메이커 갤러리)</span></label>
+      <select id="f_maker"><option>Character Maker</option><option>Product Prompt Maker</option><option>Picture Book Maker</option><option value="custom">직접 입력</option></select>
+      <input id="f_makerCustom" placeholder="메이커 이름을 입력하세요" style="margin-top:6px" hidden>
+    </div>
+    <div class="field" id="footField"><label>하단 오른쪽 문구 <span>(선택)</span></label><input id="f_foot" placeholder="예: 홈페이지 주소나 SNS 계정"><p class="hint">비워두면 COLOR.M 로고만 가운데에 들어가요</p></div>
+    </div>
+    <div class="field"><label>글자 위치</label><div class="seg" id="f_pos"><button type="button" data-v="top">위</button><button type="button" data-v="mid">가운데</button><button type="button" data-v="bottom" class="on">아래</button></div><p class="hint">미리보기에서 제목을 끌어서 원하는 곳에 옮길 수도 있어요 (위·가운데·아래를 다시 누르면 처음 자리로)</p></div>
     <div class="field"><label>정렬</label><div class="seg" id="f_align"><button type="button" data-v="left" class="on">왼쪽</button><button type="button" data-v="center">가운데</button></div></div>
     <div class="field">
       <label>글자 색</label>
@@ -421,24 +444,6 @@ html,button,select,label{touch-action:manipulation}
       <p class="hint">밝은 사진·후기 캡처엔 '검정 + 그늘 없음'이 잘 어울려요</p>
     </div>
     <div class="field"><label>글자 크기</label><div class="seg" id="f_size"><button type="button" data-v="0.8">작게</button><button type="button" data-v="1" class="on">보통</button><button type="button" data-v="1.25">크게</button></div></div>
-    <div class="field">
-      <label>레이아웃</label>
-      <div class="seg" id="f_layout"><button type="button" data-v="basic" class="on">COLOR.M 로고</button><button type="button" data-v="magazine">매거진</button><button type="button" data-v="gallery">메이커 갤러리</button><button type="button" data-v="none">없음</button></div>
-      <p class="hint">'매거진'은 베이지 바탕에 사진을 틀로 넣고 아래에 제목을 써요. 피드 색감을 하나로 맞출 때 좋아요 (카드 만들기와 같은 톤)<br>'메이커 갤러리'는 갤러리 SNS 이미지와 같은 모양이에요 (하단에 메이커 이름 · COLOR.M MAKER GALLERY)<br>'없음'은 하단 로고 띠 없이 사진만 꽉 채워요</p>
-      <label class="chk" id="layEachRow" hidden><input type="checkbox" id="f_layEach"> 사진마다 레이아웃 따로 <span>켜면 레이아웃 · 글자 위치 · 정렬이 지금 고른 사진에만 적용돼요 (위 사진 줄에서 사진을 골라 하나씩 바꿔요)</span></label>
-      <div id="magOpts" hidden>
-        <label style="margin-top:10px">위쪽 작은 영문 라벨</label>
-        <input id="f_magLabel" value="COLOR.M" placeholder="예: COLOR.M CLASS · PERSONAL COLOR">
-      </div>
-      <div id="galleryOpts" hidden>
-        <label style="margin-top:10px">메이커 이름</label>
-        <select id="f_maker"><option>Character Maker</option><option>Product Prompt Maker</option><option>Picture Book Maker</option><option value="custom">직접 입력</option></select>
-        <input id="f_makerCustom" placeholder="메이커 이름을 입력하세요" style="margin-top:6px" hidden>
-      </div>
-      <label class="chk"><input type="checkbox" id="f_brand"> 왼쪽 위 COLOR.M 표시</label>
-      <label class="chk"><input type="checkbox" id="f_aiMark"> 'AI-GENERATED IMAGE' 표시 <span>AI로 만든 이미지라면 켜 두는 걸 권해요 (왼쪽 위 표시 아래에 들어가요)</span></label>
-    </div>
-    <div class="field" id="footField"><label>하단 오른쪽 문구 <span>(선택)</span></label><input id="f_foot" placeholder="예: 홈페이지 주소나 SNS 계정"><p class="hint">비워두면 COLOR.M 로고만 가운데에 들어가요</p></div>
     <button class="go" id="downloadBtn" disabled>⬇️ PNG로 저장</button>
     <button class="go sub" id="saveOneBtn" hidden>이 사진만 저장</button>
     <button class="go sub" id="feedBtn" hidden>📱 피드 미리보기</button>
@@ -448,7 +453,7 @@ html,button,select,label{touch-action:manipulation}
     <p class="hint" style="text-align:center;margin:0" id="dimHint"></p>
   </div>
   <div class="preview-outer">
-    <div class="preview-wrap empty" id="previewWrap"><div class="drag-hint" id="dragHint">🖐️ 드래그해서 사진 위치 조정</div><div class="blur-layer" id="blurLayer" hidden></div><div class="feed-guide" id="feedGuide" hidden><span>피드에 보이는 영역</span></div>
+    <div class="preview-wrap empty" id="previewWrap"><div class="drag-hint" id="dragHint">🖐️ 드래그해서 사진 · 제목 위치 조정</div><div class="blur-layer" id="blurLayer" hidden></div><div class="feed-guide" id="feedGuide" hidden><span>피드에 보이는 영역</span></div>
       <div id="posterRoot">
         <div class="p-photo">
           <img class="p-bg" alt="" hidden>
@@ -612,10 +617,23 @@ function applyRatio(){
   $("o_title").style.fontSize = (BASE_TITLE_SIZE * s) + "px";
   $("o_sub").style.fontSize = (BASE_SUB_SIZE * s) + "px";
   const mq = c => root.querySelector(".p-mag " + c);
-  mq(".m-title").style.fontSize = (76 * s) + "px";
-  mq(".m-sub").style.fontSize = (30 * s) + "px";
+  mq(".m-title").dataset.base = 76 * s;
+  mq(".m-sub").dataset.base = 30 * s;
   mq(".m-label").style.fontSize = (24 * Math.min(s, 1.1)) + "px";
   setMagSize();
+  fitMag(root);
+}
+/* 매거진: 제목이 길어 글자가 하단 로고 띠에 가려지면, 다 들어갈 때까지 제목·작은 글씨를 조금씩 줄임 */
+function fitMag(root){
+  const pm = root.querySelector(".p-mag"), t = pm.querySelector(".m-title"), su = pm.querySelector(".m-sub");
+  const bt = parseFloat(t.dataset.base) || 76, bs = parseFloat(su.dataset.base) || 30;
+  t.style.fontSize = bt + "px"; su.style.fontSize = bs + "px";
+  if(!root.classList.contains("lay-mag") || pm.style.display === "none") return;
+  for(let f = 1; pm.scrollHeight > pm.clientHeight + 1 && f > 0.5; ){
+    f -= 0.04;
+    t.style.fontSize = bt * f + "px";
+    su.style.fontSize = bs * Math.max(f, 0.8) + "px";
+  }
 }
 
 const TOP_BIAS = 0.6; // 위아래가 잘릴 때 0 = 가운데, 1 = 사진 맨 위에 맞춤
@@ -778,6 +796,8 @@ function fillText(root, i){
   q(".p-title").textContent = title;
   q(".p-sub").textContent = sub;
   q(".p-sub").style.display = sub ? "" : "none";
+  const L = layOf(i); // 미리보기에서 끌어 옮긴 만큼 (포스터 px)
+  q(".p-text").style.transform = L.tx || L.ty ? `translate(${L.tx || 0}px,${L.ty || 0}px)` : "";
   /* 글자가 없으면 사진을 어둡게 덮지 않음 */
   q(".p-scrim").style.display = title.trim() || sub ? "" : "none";
   q(".p-foot .r").textContent = foot;
@@ -798,6 +818,7 @@ function fillText(root, i){
   q(".p-mag .m-title").textContent = title;
   q(".p-mag .m-sub").textContent = sub;
   q(".p-mag .m-sub").style.display = sub ? "" : "none";
+  fitMag(root);
 }
 function syncText(){ fillText($("posterRoot"), Math.max(cur, 0)); }
 /* 입력칸에 지금 편집 중인 글자를 보여줌 (장마다 다르게면 현재 사진의 글자) */
@@ -830,7 +851,7 @@ function copyTextToAll(field){
   photos.forEach(p => { p[field] = v; p[field + "Edited"] = false; });
   shared[field] = v;
   syncText(); autoRefit(); clearPending();
-  toast(`${field === "title" ? "제목을" : "작은 글씨를"} ${photos.length}장 모두에 넣었어요`);
+  toast(`${field === "title" ? "제목을" : "하단 작은 글씨를"} ${photos.length}장 모두에 넣었어요`);
 }
 
 /* ---------- 화면 갱신 ---------- */
@@ -1077,10 +1098,19 @@ document.addEventListener("paste", e => {
     startZoom = P().zoom;
     startDist = pts.size >= 2 ? dist() : 0;
   }
+  let textDrag = null; // 제목을 잡았으면 사진 대신 글자를 옮김 {x, y, tx, ty}
+  const layNow = () => layEach && P() ? P().lay : G;
   wrap.addEventListener("pointerdown", e => {
     if(!P()) return; // 사진이 없을 때 누르면 사진 선택 (아래 click에서 — 폰은 손가락을 뗄 때만 선택 창을 열 수 있음)
     if(blurMode) return; // 얼굴 가리기 중엔 사진 대신 가리개를 다룸
     if(e.pointerType === "mouse" && e.button !== 0) return;
+    if(!pts.size && e.target.closest("#posterRoot .p-title, #posterRoot .p-sub")){
+      const L = layNow();
+      textDrag = {x:e.clientX, y:e.clientY, tx:L.tx || 0, ty:L.ty || 0};
+      wrap.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      return;
+    }
     wrap.setPointerCapture(e.pointerId);
     pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
     wrap.classList.add("dragging");
@@ -1089,6 +1119,14 @@ document.addEventListener("paste", e => {
     e.preventDefault();
   });
   wrap.addEventListener("pointermove", e => {
+    if(textDrag){
+      const L = layNow(), r = ratio();
+      /* 글자가 화면 밖으로 완전히 나가지 않게 포스터 크기 안에서만 */
+      L.tx = Math.max(-r.w * .8, Math.min(r.w * .8, textDrag.tx + (e.clientX - textDrag.x) / previewScale));
+      L.ty = Math.max(-r.h * .9, Math.min(r.h * .9, textDrag.ty + (e.clientY - textDrag.y) / previewScale));
+      syncText();
+      return;
+    }
     if(!pts.has(e.pointerId) || !P()) return;
     pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
     if(pts.size >= 2 && startDist > 0){
@@ -1103,6 +1141,7 @@ document.addEventListener("paste", e => {
     applyImgTransform();
   });
   function end(e){
+    if(textDrag){ textDrag = null; return; }
     if(!pts.delete(e.pointerId)) return;
     if(pts.size) rebase(); else wrap.classList.remove("dragging");
   }
@@ -1204,7 +1243,11 @@ wireSeg("f_preset", v => {
   /* 비율·로고 띠가 바뀌었을 수 있으니 사진 크기 다시 맞춤 (cover로 바뀐 경우 f_fit에서 이미 맞췄어도 한 번 더) */
   photos.forEach(fitPhoto); show(cur);
 });
-wireSeg("f_pos", v => { setLay("pos", v); autoRefit(); });
+wireSeg("f_pos", v => {
+  setLay("pos", v);
+  const L = layEach && P() ? P().lay : G; L.tx = L.ty = 0; // 위·가운데·아래를 고르면 끌어 옮긴 위치는 처음으로
+  syncText(); autoRefit();
+});
 wireSeg("f_align", v => { setLay("align", v); });
 document.querySelector(".panel").addEventListener("input", clearPending);
 document.querySelector(".panel").addEventListener("change", clearPending);
@@ -1229,7 +1272,7 @@ function setBlurMode(on){
   $("blurDone").hidden = !on;
   $("blurLayer").hidden = !on;
   $("previewWrap").classList.toggle("blurring", on);
-  $("dragHint").textContent = on ? "👆 가릴 곳을 누르거나 드래그하세요" : "🖐️ 드래그해서 사진 위치 조정";
+  $("dragHint").textContent = on ? "👆 가릴 곳을 누르거나 드래그하세요" : "🖐️ 드래그해서 사진 · 제목 위치 조정";
   renderBoxes();
 }
 
@@ -1660,6 +1703,7 @@ async function renderPhoto(i){
   placeImg(img, p);
   fillText(clone, i);
   document.body.appendChild(clone);
+  fitMag(clone); // 화면에 붙인 뒤라야 글자 높이를 잴 수 있음
   try{
     if(img.decode) await img.decode().catch(() => {});
     const canvas = await html2canvas(clone, {width:r.w, height:r.h, scale:1, useCORS:true, backgroundColor:"#ffffff"});
@@ -1741,7 +1785,7 @@ async function collectWork(){
     settings:{
       preset:segVal("f_preset"), ratio:$("f_ratio").value, ratioManuallySet, reelsSafe:$("f_reelsSafe").checked,
       fit:segVal("f_fit"), bg:segVal("f_bgMode"), textColor:segVal("f_textColor"), shade:segVal("f_shade"),
-      pos:G.pos, align:G.align, size:segVal("f_size"), textOn:segVal("f_textOn"), layEach,
+      pos:G.pos, align:G.align, tx:G.tx || 0, ty:G.ty || 0, size:segVal("f_size"), textOn:segVal("f_textOn"), layEach,
       shared:{...shared}, foot:$("f_foot").value,
       blurType:segVal("f_blurType"), blurShape:segVal("f_blurShape"), blurLevel,
       layout:G.layout, maker:$("f_maker").value, makerCustom:$("f_makerCustom").value, magLabel:$("f_magLabel").value,
@@ -1778,7 +1822,7 @@ async function restoreWork(w){
     shared.title = s.shared.title || ""; shared.sub = s.shared.sub || "";
     $("f_foot").value = s.foot || "";
     setSegUI("f_layout", s.layout || "basic");
-    Object.assign(G, {layout:s.layout || "basic", pos:s.pos || "bottom", align:s.align || "left"});
+    Object.assign(G, {layout:s.layout || "basic", pos:s.pos || "bottom", align:s.align || "left", tx:s.tx || 0, ty:s.ty || 0});
     layEach = !!s.layEach; $("f_layEach").checked = layEach;
     $("f_magLabel").value = s.magLabel ?? "COLOR.M";
     $("f_maker").value = s.maker || "Character Maker"; $("f_makerCustom").value = s.makerCustom || "";
@@ -2533,6 +2577,7 @@ $("f_brand").checked = false; $("f_aiMark").checked = false; $("f_maker").value 
 applyLayout();
 syncText();
 applyRatio();
+document.fonts.addEventListener("loadingdone", syncText); // 명조체가 늦게 받아지면 글자 높이가 바뀌니 매거진 글자 크기를 다시 맞춤
 renderStrip();
 </script>
 </body></html>
